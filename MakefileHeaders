@@ -2,11 +2,11 @@ CC=avr-gcc
 F_CPU=16000000L
 MMCU=atmega32u4
 P=m32u4
-NOMBRE=prueba
+NOMBRE=lcd
 PUERTO=/dev/ttyACM0
 VELOCIDAD=57600
 PROTOCOLO=avr109
-LIBS=common.c prueba.c
+LIBS=common.c lcd.c
 OBJECTS=$(LIBS:.c=.o)
 
 
