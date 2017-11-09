@@ -2,18 +2,7 @@
 #include <util/delay.h>
 #include "common.h"
 #define LCD_START 20000 //20ms
-#define D0 0
-#define D1 0
-#define D2 0
-#define D3 0
-#define D4_OUTPUT (DDRD |= (1<<4)
-#define D5 0
-#define D6 0
-#define D7_OUTPUT DDRE |= (1 << 6) //Pin D7 salida
-#define D7_INPUT 0
-#define D8 0
-#define D9 0
-#define D11 0
+
 //#define miWait(c) _delay_ms(c/100)
 #define miWait(c) _delay_ms(2000)
 
@@ -25,21 +14,41 @@
 /*   PORTC &=~(1<<7); */
 
 /* } */
+void set4bits(int c){
+    int i;
+  if(((code >> 0)&1) == 0)
+    writeLow(D4);
+  else
+    writeHigh(D4);
+  if(((code >> 1)&1) == 0)
+    writeLow(D5);
+  else
+    writeHigh(D5);
+  if(((code >> 2)&1) == 0)
+    writeLow(D6);
+  else
+    writeHigh(D6);
+  if(((code >> 3)&1) == 0)
+    writeLow(D7);
+  else
+    writeHigh(D7);
+  
 
+}
 int configureLCD(){
      miWait(LCD_START);
  
-    //PORTB &= ~(1<<4); //RS escribir 0
-    writeLow(D8);
-    //PORTD |= (1<<4); //D4 escribir 1
-    writeHigh(D4);
-    //PORTD &= ~(1<<7); //D6 escribir 0
-    writeLow(D6);
-    //PORTC |= (1<<6);//D5 1
-    writeHigh(D5);
-    //PORTE &= ~(1<<6);//D7 0
-    writeLow(D6);
-
+    /* //PORTB &= ~(1<<4); //RS escribir 0 */
+     writeLow(D8); 
+    /* //PORTD |= (1<<4); //D4 escribir 1 */
+    /* writeHigh(D4); */
+    /* //PORTD &= ~(1<<7); //D6 escribir 0 */
+    /* writeLow(D6); */
+    /* //PORTC |= (1<<6);//D5 1 */
+    /* writeHigh(D5); */
+    /* //PORTE &= ~(1<<6);//D7 0 */
+    /* writeLow(D7); */
+     set4bits(0b0011);
 
 
 
@@ -50,21 +59,30 @@ int configureLCD(){
 
     writeHigh(D9);
     write(D9,LOW);
+    
     miWait(200);
+    
     writeHigh(D9);
     write(D9,LOW);
+    
     miWait(1);
-    PORTD &= ~(1<<4); //D4 escribir 0
+    set4bits(0b0010);
+    //    PORTD &= ~(1<<4); //D4 escribir 0
     miWait(1);
+    
     writeHigh(D9);
     write(D9,LOW);
+    
     miWait(50);
 
     writeHigh(D9);
     write(D9,LOW);
 
-    PORTE |= (1<<6);//D7 1
-    PORTD &= ~(1<<7); //D6 escribir 0
+        // PORTE |= (1<<6);//D7 1
+    //writeHigh(D7);
+    set4bits(0b1010);
+      //    PORTD &= ~(1<<7); //D6 escribir 0
+    //    writeLow(D6);
     writeHigh(D9);
     write(D9,LOW);
     miWait(40);
@@ -75,9 +93,14 @@ int main(){
     //DDRE |= (1 << 6); //Pin D7 salida
     pinOutput(D7);
     //D7_OUTPUT
-    DDRD |= ((1<<4) | (1<<7));// Pin D4 y D6 salida
-    DDRC |= (1<<6); //Pin D5 salida
-    DDRB |= ((1<<5) | (1<<4));//D9(E) y D8(RS) salida
+    pinOutput(D4);
+    pinOutput(D6);
+    //    DDRD |= ((1<<4) | (1<<7));// Pin D4 y D6 salida
+    pinOutput(D5);
+    //    DDRC |= (1<<6); //Pin D5 salida
+    pinOutput(D9);
+    pinOutput(D8);
+    //    DDRB |= ((1<<5) | (1<<4));//D9(E) y D8(RS) salida
 
     configureLCD();
     
