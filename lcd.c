@@ -171,33 +171,36 @@
 /*     return 0; */
 /* } */
 void lcd_sendEnable(void){
-  CLRCTRL(BITE);
+  BCLR(PIN_E,BIT_E);
   //Es posible que haya que meter un wait
   myWait(10);
-  SETCTRL(BITE);
+  BSET(PIN_E,BIT_E);
   myWait(10);
   //Es posible que haya que meter un wait
-  CLRCTRL(BITE);
+  BCLR(PIN_E,BIT_E);
   myWait(10);
 }
 void lcd_send4bitCode( char code){ //La parte más significativa de code irá al pin más significativo
   int i;
   if(((code >> 0)&1) == 0)
-    CLRD(BITD4);
+    BCLR(PIN_D4,BIT_D4);
   else
-    SETD(BITD4);
+    BSET(PIN_D4,BIT_D4);
+  
   if(((code >> 1)&1) == 0)
-    CLRD(BITD5);
+    BCLR(PIN_D5,BIT_D5);
   else
-    SETD(BITD5);
-    if(((code >> 2)&1) == 0)
-    CLRD(BITD6);
+    BSET(PIN_D5,BIT_D5);
+  
+  if(((code >> 2)&1) == 0)
+    BCLR(PIN_D6,BIT_D6);
   else
-    SETD(BITD6);
+    BSET(PIN_D6,BIT_D6);
+  
   if(((code >> 3)&1) == 0)
-    CLRD(BITD7);
+    BCLR(PIN_D7,BIT_D7);
   else
-    SETD(BITD7);
+    BSET(PIN_D7,BIT_D7);
 
   lcd_sendEnable();
 }
@@ -210,13 +213,15 @@ void lcd_send8bitCode(unsigned char code){
 
 void lcd_setup(void){
   myWait(40000);
-  CLRCTRL(BITRS);
-  CLRCTRL(BITE);
-  CLRD(BITD7);
-  CLRD(BITD6);
-  SETD(BITD5);
-  SETD(BITD4);
-  lcd_sendEnable();
+  BCLR(PIN_RS,BIT_RS);
+  BCLR(PIN_E,BIT_E);
+  /* BCLR(PIN_D7,BIT_D7); */
+  /* BCLR(PIN_D7,BIT_D6); */
+  /* CLRD(BITD6); */
+  /* SETD(BITD5); */
+  /* SETD(BITD4); */
+  /* lcd_sendEnable(); */
+  lcd_send4bitCode(0x03); //protocolo para poner la interfaz a 4 bits
   myWait(5000);
   lcd_sendEnable();
   myWait(500);
@@ -235,9 +240,9 @@ void lcd_setup(void){
 }
 
 void lcd_printchr(char chr, char addr){
-  CLRCTRL(BITRS);
+  BCLR(PIN_RS,BIT_RS);
   lcd_send8bitCode(1<<7 | (0x7F & addr));
-  SETCTRL(BITRS);
+  BSET(PIN_RS,BIT_RS);
   lcd_send8bitCode(chr);
 }
 void lcd_prints(char * ln,char addr){
@@ -259,6 +264,7 @@ int main(void){
 
   lcd_setup();
   lcd_prints("Hola\0",0);
+  
    while(1) {
   /* set pin 5 high to turn led on */
   PORTB |= _BV(PORTB5);
