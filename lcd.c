@@ -1,10 +1,10 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include "common.h"
-#define LCD_START 20000 //20ms
+#define LCD_START 2 //20ms
 
-//#define miWait(c) _delay_ms(c/100)
-#define miWait(c) _delay_ms(2000)
+#define miWait(c) _delay_ms(c)
+//#define miWait(c) _delay_ms(20000)
 
 
 /* void miWait(int cicles){ */
@@ -14,169 +14,145 @@
 /*   PORTC &=~(1<<7); */
 
 /* } */
-void set4bits(int c){
+
+void set4bits(int code){
     int i;
-  if(((code >> 0)&1) == 0)
-    writeLow(D4);
-  else
-    writeHigh(D4);
-  if(((code >> 1)&1) == 0)
-    writeLow(D5);
-  else
-    writeHigh(D5);
-  if(((code >> 2)&1) == 0)
-    writeLow(D6);
-  else
-    writeHigh(D6);
-  if(((code >> 3)&1) == 0)
-    writeLow(D7);
-  else
-    writeHigh(D7);
-  
+    if(((code >> 0)&1) == 0)
+	writeLow(D4);
+    else
+	writeHigh(D4);
+    if(((code >> 1)&1) == 0)
+	writeLow(D5);
+    else
+	writeHigh(D5);
+    if(((code >> 2)&1) == 0)
+	writeLow(D6);
+    else
+	writeHigh(D6);
+    if(((code >> 3)&1) == 0)
+	writeLow(D7);
+    else
+	writeHigh(D7);
+}
+void send(){
+    writeHigh(D9);
+    writeLow(D9);
+}
+void sendCharacter(char character){
+    //TODO coger el valor del registro y guardarlo.
+    //Hacer un getValue en common
+    //int preD8 = D8;
+    writeHigh(D8);
+    int highBits = ((character & 240)>>4);
+    set4bits(highBits);
+    send();
+    int lowBits = (character & 15);
+    set4bits(lowBits);
+    send();
+    //D8 = preD8;
+}
+void sendString(char *string){
+    int i = 0;
+    while(string[i] != '\0'){
+	sendCharacter(string[i]);
+	miWait(0.05);
+	i++;
+    }
 
 }
 int configureLCD(){
-     miWait(LCD_START);
- 
-    /* //PORTB &= ~(1<<4); //RS escribir 0 */
-     writeLow(D8); 
-    /* //PORTD |= (1<<4); //D4 escribir 1 */
-    /* writeHigh(D4); */
-    /* //PORTD &= ~(1<<7); //D6 escribir 0 */
-    /* writeLow(D6); */
-    /* //PORTC |= (1<<6);//D5 1 */
-    /* writeHigh(D5); */
-    /* //PORTE &= ~(1<<6);//D7 0 */
-    /* writeLow(D7); */
-     set4bits(0b0011);
+    miWait(LCD_START);
+
+    writeLow(D8); 
+    set4bits(0b0011);
+
+    send();
+
+    miWait(5);
 
 
+    send();
 
-    writeHigh(D9);
-    write(D9,LOW);
+    miWait(0.1);
 
-    miWait(5000);
 
-    writeHigh(D9);
-    write(D9,LOW);
-    
-    miWait(200);
-    
-    writeHigh(D9);
-    write(D9,LOW);
-    
-    miWait(1);
+    send();
+
+    //miWait(1);
     set4bits(0b0010);
-    //    PORTD &= ~(1<<4); //D4 escribir 0
-    miWait(1);
-    
-    writeHigh(D9);
-    write(D9,LOW);
-    
-    miWait(50);
+    miWait(0.04);
 
-    writeHigh(D9);
-    write(D9,LOW);
 
-        // PORTE |= (1<<6);//D7 1
-    //writeHigh(D7);
+    send();
+
+    miWait(0.05);
+
+
+    send();
+
     set4bits(0b1010);
-      //    PORTD &= ~(1<<7); //D6 escribir 0
-    //    writeLow(D6);
-    writeHigh(D9);
-    write(D9,LOW);
-    miWait(40);
+
+    send();
+    miWait(0.05);
+}
+void clear(){
+    writeLow(D8);
+    set4bits(0);
+    send();
+    set4bits(1);
+    send();
+    miWait(2);
+
 }
 
 int main(){
-   DDRC |= (1<<7);
-    //DDRE |= (1 << 6); //Pin D7 salida
+    //D8 RS
+    //D9 E
+    DDRC |= (1<<7);
     pinOutput(D7);
-    //D7_OUTPUT
     pinOutput(D4);
     pinOutput(D6);
-    //    DDRD |= ((1<<4) | (1<<7));// Pin D4 y D6 salida
     pinOutput(D5);
-    //    DDRC |= (1<<6); //Pin D5 salida
     pinOutput(D9);
     pinOutput(D8);
-    //    DDRB |= ((1<<5) | (1<<4));//D9(E) y D8(RS) salida
 
     configureLCD();
-    
-
-    // return home
-
-    PORTB &= ~(1<<4); //RS escribir 0
-    
-    PORTE &= ~(1<<6);//D7 0
-    PORTD &= (1<<7); //D6 escribir 0
-    PORTC &= ~(1<<6);//D5 0
-    PORTD &= ~(1<<4); //D4 escribir 0
-
-    PORTB |= (1<<5);
-    PORTB &= ~(1<<5);
-
-    PORTE &= ~(1<<6);//D7 0
-    PORTD &= ~(1<<7); //D6 escribir 0
-    PORTC |= (1<<6);//D5 1
-    PORTD &= ~(1<<4); //D4 escribir 0
-
-    PORTB |= (1<<5);
-    PORTB &= ~(1<<5);
-
-    miWait(3000);
-
-        // display on
-
-    PORTB &= ~(1<<4); //RS escribir 0
-    
-    PORTE &= ~(1<<6);//D7 0
-    PORTD &= ~(1<<7); //D6 escribir 0
-    PORTC &= ~(1<<6);//D5 0
-    PORTD &= ~(1<<4); //D4 escribir 0
-
-    PORTB |= (1<<5);
-    PORTB &= ~(1<<5);
-
-    PORTE |= (1<<6);//D7 1
-    PORTD |= (1<<7); //D6 escribir 1
-    PORTC |= (1<<6);//D5 1
-    PORTD |= (1<<4); //D4 escribir 1
-
-    PORTB |= (1<<5);
-    PORTB &= ~(1<<5);
-
-    miWait(40);
-
-    
-    
-    PORTB |= (1<<4); //RS escribir 1
 
 
-    PORTE &= ~(1<<6);//D7 0
-    PORTD |= (1<<7); //D6 escribir 1
-    PORTC &= ~(1<<6);//D5 0
-    PORTD &= ~(1<<4); //D4 escribir 0
+    //return home
+    set4bits(0b0000);
+    send();
+    set4bits(0b0010);
+    send();
+    miWait(2.1);
 
-    PORTB |= (1<<5);
-    PORTB &= ~(1<<5);
+    //Power on
+    writeLow(D8);
+    set4bits(0b0000);
+    send();
+    set4bits(0b1111);
+    send();
+    miWait(0.05);
 
-    PORTE &= ~(1<<6);//D7 0
-    PORTD &= ~(1<<7); //D6 escribir 0
-    PORTC &= ~(1<<6);//D5 0
-    PORTD |= (1<<4); //D4 escribir 1
+    clear();
+    sendString("Paco fiestas");
+    //Mueve el cursor a la siguiente linea
+    writeLow(D8);
+    set4bits(0b1100);
+    send();
+    set4bits(0b0000);
+    send();
+    miWait(0.04);
+    sendString("Miguel & Daniel");
 
-    PORTB |= (1<<5);
-    PORTB &= ~(1<<5);
     while(1) {
-      /* set pin 5 high to turn led on */
-      write(D13,HIGH);
-      _delay_ms(1000);
+	/* set pin 5 high to turn led on */
+	write(D13,HIGH);
+	_delay_ms(1000);
 
-      /* set pin 5 low to turn led off */
-      writeLow(D13);
-      _delay_ms(1000);
+	/* set pin 5 low to turn led off */
+	writeLow(D13);
+	_delay_ms(1000);
     }
     return 0;
 }

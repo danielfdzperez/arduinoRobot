@@ -6,16 +6,26 @@ NOMBRE=lcd
 PUERTO=/dev/ttyACM0
 VELOCIDAD=57600
 PROTOCOLO=avr109
+LIBS=common.c lcd.c
+OBJECTS=$(LIBS:.c=.o)
+
 
 all : $(NOMBRE).hex
+	make clean
+#$(NOMBRE).o : $(NOMBRE).c
+#	$(CC) -Os -DF_CPU=$(F_CPU) -mmcu=$(MMCU) -c -o $@  $< 
 
-$(NOMBRE).o : $(NOMBRE).c
-	$(CC) -Os -DF_CPU=$(F_CPU) -mmcu=$(MMCU) -c -o $@ $<
+.c.o:
+	$(CC) -Os -DF_CPU=$(F_CPU) -mmcu=$(MMCU) -c -o $@  $< 
 
-$(NOMBRE) : $(NOMBRE).o
-	$(CC) -mmcu=$(MMCU) $(NOMBRE).o -o $(NOMBRE)
+$(NOMBRE) : $(NOMBRE).o $(OBJECTS)
+	$(CC) -mmcu=$(MMCU) $(OBJECTS) -o $(NOMBRE)
+
 $(NOMBRE).hex : $(NOMBRE)
 	avr-objcopy -O ihex -R .eeprom $(NOMBRE) $(NOMBRE).hex
 
 subir : $(NOMBRE).hex
 	avrdude -c $(PROTOCOLO) -p $(P) -P $(PUERTO) -D -b $(VELOCIDAD) -U flash:w:$(NOMBRE).hex
+
+clean : 
+	-rm $(OBJECTS) *.hex
