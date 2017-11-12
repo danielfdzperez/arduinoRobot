@@ -60,6 +60,26 @@ void sendString(char *string){
     }
 
 }
+int closest10Pow(int n){
+  if(n<10)
+    return 1;
+  int i;
+  for(i=10;i<n;i*=10);
+  return i/10;
+
+}
+void sendInteger(int ln){
+  int den;
+  char chr;
+  int lastden;
+
+  for(den=closest10Pow(ln);den  != 0 ;den/=10){
+    chr = '0' + ((ln/den)%10);
+    sendCharacter(chr);
+  }
+
+}
+
 int configureLCD(){
     miWait(LCD_START);
 
