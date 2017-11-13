@@ -4,16 +4,6 @@
 #define LCD_START 2 //20ms
 
 #define miWait(c) _delay_ms(c)
-//#define miWait(c) _delay_ms(20000)
-
-
-/* void miWait(int cicles){ */
-/*   PORTC |=(1<<7); */
-/*   int i; */
-/*   for(i=0;i<cicles*20000;i++); */
-/*   PORTC &=~(1<<7); */
-
-/* } */
 
 void set4bits(int code){
     int i;
@@ -38,18 +28,23 @@ void send(){
     writeHigh(D9);
     writeLow(D9);
 }
+void send8bits(unsigned char code){
+  //Se envía la parte alta:
+  set4bits(0x0f & (code >>4));
+  send();
+  _delay_us(40);
+  //Se envía la parte baja:
+  set4bits(code & 0x0F);
+  send();
+
+}
 void sendCharacter(char character){
     //TODO coger el valor del registro y guardarlo.
     //Hacer un getValue en common
     //int preD8 = D8;
     writeHigh(D8);
-    int highBits = ((character & 240)>>4);
-    set4bits(highBits);
-    send();
-    int lowBits = (character & 15);
-    set4bits(lowBits);
-    send();
     //D8 = preD8;
+    send8bits(character);
 }
 void sendString(char *string){
     int i = 0;
@@ -60,6 +55,16 @@ void sendString(char *string){
     }
 
 }
+
+void setCursor(int f, int c){
+  int addr;
+  addr = f*0x40+c;
+  //  CLRCTRL(BITRS);
+  writeLow(D8);
+  send8bits(1<<7 | (0x7F & addr));
+  _delay_us(37);
+}
+
 int closest10Pow(int n){
   if(n<10)
     return 1;
@@ -68,11 +73,11 @@ int closest10Pow(int n){
   return i/10;
 
 }
+
 void sendInteger(int ln){
   int den;
   char chr;
   int lastden;
-
   for(den=closest10Pow(ln);den  != 0 ;den/=10){
     chr = '0' + ((ln/den)%10);
     sendCharacter(chr);
