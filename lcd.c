@@ -1,10 +1,12 @@
 #include <avr/io.h>
+#include <avr/interrupt.h>
 #include <util/delay.h>
 #include "common.h"
 #define LCD_START 2 //20ms
 
 #define miWait(c) _delay_ms(c)
 
+volatile int N = 0;
 void set4bits(int code){
     if(((code >> 0)&1) == 0)
 	writeLow(D4);
@@ -35,6 +37,7 @@ void send8bits(unsigned char code){
   //Se envía la parte baja:
   set4bits(code & 0x0F);
   send();
+    _delay_us(40);
 
 }
 void sendCharacter(char character){
@@ -58,10 +61,9 @@ void sendString(char *string){
 void setCursor(int f, int c){
   int addr;
   addr = f*0x40+c;
-  //  CLRCTRL(BITRS);
   writeLow(D8);
   send8bits(1<<7 | (0x7F & addr));
-  _delay_us(37);
+  _delay_us(40);
 }
 
 int closest10Pow(int n){
@@ -129,6 +131,30 @@ void clear(){
 
 }
 
+void setupTimer(int time){
+  TCCR1A = 0; //WGM 
+  TCCR1B=0b00011100;//N=256
+  TCCR1C=0b00000000;//
+  TIMSK1 |= (1<<1);
+
+  ICR1=31249; //1 Hz
+  PRR0 &= ~(1<<5); // Enable clock
+  sei();
+}
+void contador(){
+  // write(D13,HIGH);
+  N++;
+}
+
+ISR(TIMER1_CAPT_vect){
+
+  //  cli();
+  //  contador();
+  contador();
+  //  sei();
+  
+}
+
 int main(){
     //D8 RS
     //D9 E
@@ -159,20 +185,28 @@ int main(){
     miWait(0.05);
 
     clear();
-    sendString("Paco fiestas");
+    setCursor(0,7);
+    sendInteger(666);
     //Mueve el cursor a la siguiente linea
-    setCursor(1,0);
+  
     miWait(0.04);
+    setCursor(1,0);  
     sendString("Miguel & Daniel");
 
+    setupTimer(1);
+   
     while(1) {
-	/* set pin 5 high to turn led on */
-	write(D13,HIGH);
-	_delay_ms(1000);
-
-	/* set pin 5 low to turn led off */
-	writeLow(D13);
-	_delay_ms(1000);
+      
+      setCursor(0,0);
+      sendInteger(N); // o bien TCNT1
+//        /* set pin 5 high to turn led on */
+//        write(D13,HIGH);
+//        _delay_ms(1000);
+//        /* set pin 5 low to turn led off */
+//        writeLow(D13);
+   
+   
+        
     }
     return 0;
 }
