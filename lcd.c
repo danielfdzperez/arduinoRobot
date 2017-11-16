@@ -6,7 +6,7 @@
 
 #define miWait(c) _delay_ms(c)
 
-volatile int N = 0;
+volatile long long int N = 0;
 void set4bits(int code){
     if(((code >> 0)&1) == 0)
 	writeLow(D4);
@@ -37,7 +37,10 @@ void send8bits(unsigned char code){
   //Se envía la parte baja:
   set4bits(code & 0x0F);
   send();
+  //<<<<<<< HEAD
     _delay_us(40);
+  //=======
+          //>>>>>>> 41a70106ca62b35f44663af4ef4cc63f0d7a147c
 
 }
 void sendCharacter(char character){
@@ -64,22 +67,24 @@ void setCursor(int f, int c){
   writeLow(D8);
   send8bits(1<<7 | (0x7F & addr));
   _delay_us(40);
+  writeLow(D8);
+  send8bits(1<<7 | (0x7F & addr));
+  _delay_us(37);
 }
 
-int closest10Pow(int n){
+long int closest10Pow(long int n){
   if(n<10)
     return 1;
-  int i;
-  for(i=10;i<n;i*=10);
+  long int i;
+  for(i=10;i<=n;i*=10);
   return i/10;
 
 }
 
-void sendInteger(int ln){
-  int den;
+void sendInteger(long int ln){
+  long int den;
   char chr;
-  int lastden;
-  for(den=closest10Pow(ln);den  != 0 ;den/=10){
+   for(den=closest10Pow(ln);den  != 0 ;den/=10){
     chr = '0' + ((ln/den)%10);
     sendCharacter(chr);
   }
@@ -101,7 +106,7 @@ int configureLCD(){
 
     miWait(0.1);
 
-
+ 
     send();
 
     //miWait(1);
@@ -132,33 +137,28 @@ void clear(){
 }
 
 void setupTimer(int time){
-  TCCR1A = 0; //WGM 
+  TCCR1A = 0; //WGM
   TCCR1B=0b00011100;//N=256
-  TCCR1C=0b00000000;//
+  TCCR1C=0b00000000;
   TIMSK1 |= (1<<1);
 
-  ICR1=31249; //1 Hz
-  PRR0 &= ~(1<<5); // Enable clock
-  sei();
+  ICR1=31249;// 1 Hz
+  PRR0 &= ~(1<<5); //Enable clock
+  //  sei();
 }
 void contador(){
-  // write(D13,HIGH);
+  write(D13,HIGH);
   N++;
 }
 
-ISR(TIMER1_CAPT_vect){
-
-  //  cli();
-  //  contador();
-  contador();
-  //  sei();
-  
-}
+/* ISR(TIMER1_CAPT_vect){ */
+/*   contador(); */
+/* } */
 
 int main(){
-    //D8 RS
-    //D9 E
-    DDRC |= (1<<7);
+  //    D8 RS
+  //    D9 E
+  //    DDRC |= (1<<7);
     pinOutput(D7);
     pinOutput(D4);
     pinOutput(D6);
@@ -176,7 +176,7 @@ int main(){
     send();
     miWait(2.1);
 
-    //Power on
+    //    Power on
     writeLow(D8);
     set4bits(0b0000);
     send();
@@ -186,26 +186,26 @@ int main(){
 
     clear();
     setCursor(0,7);
-    sendInteger(666);
-    //Mueve el cursor a la siguiente linea
+    sendInteger(1);
+    //    Mueve el cursor a la siguiente linea
   
     miWait(0.04);
     setCursor(1,0);  
     sendString("Miguel & Daniel");
-
+    N=1;
     setupTimer(1);
-   
+    //    sei();
     while(1) {
-      
       setCursor(0,0);
       sendInteger(N); // o bien TCNT1
-//        /* set pin 5 high to turn led on */
-//        write(D13,HIGH);
-//        _delay_ms(1000);
-//        /* set pin 5 low to turn led off */
-//        writeLow(D13);
-   
-   
+      N*=2;
+      /* set pin 5 high to turn led on */
+      write(D13,HIGH);
+      _delay_ms(250);
+      /* set pin 5 low to turn led off */
+      writeLow(D13);
+      _delay_ms(250);
+    
         
     }
     return 0;
