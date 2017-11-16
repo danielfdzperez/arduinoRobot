@@ -6,7 +6,7 @@
 
 #define miWait(c) _delay_ms(c)
 
-volatile long long int N = 0;
+volatile int N = 0;
 void set4bits(int code){
     if(((code >> 0)&1) == 0)
 	writeLow(D4);
@@ -37,11 +37,7 @@ void send8bits(unsigned char code){
   //Se envía la parte baja:
   set4bits(code & 0x0F);
   send();
-  //<<<<<<< HEAD
     _delay_us(40);
-  //=======
-          //>>>>>>> 41a70106ca62b35f44663af4ef4cc63f0d7a147c
-
 }
 void sendCharacter(char character){
     //TODO coger el valor del registro y guardarlo.
