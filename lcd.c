@@ -134,22 +134,28 @@ void clear(){
 
 void setupTimer(int time){
   TCCR1A = 0; //WGM
-  TCCR1B=0b00011100;//N=256
+  TCCR1B=0b00001100;//N=256
   TCCR1C=0b00000000;
   TIMSK1 |= (1<<1);
-
-  ICR1=31249;// 1 Hz
-  PRR0 &= ~(1<<5); //Enable clock
+  OCR1A=31249;// 1 Hz
+  //  PRR0 &= ~(1<<5); //Enable clock
   //  sei();
 }
 void contador(){
   write(D13,HIGH);
   N++;
 }
+EMPTY_INTERRUPT(BADISR_vect);
+ISR(TIMER1_COMPA_vect){
+  write(D13,HIGH);
+  contador();
+ }
 
-/* ISR(TIMER1_CAPT_vect){ */
-/*   contador(); */
-/* } */
+ISR(TIMER1_CAPT_vect,ISR_ALIASOF(TIMER1_COMPA_vect));
+ISR(TIMER1_OVF_vect,ISR_ALIASOF(TIMER1_COMPA_vect));
+
+
+
 
 int main(){
   //    D8 RS
@@ -190,17 +196,19 @@ int main(){
     sendString("Miguel & Daniel");
     N=1;
     setupTimer(1);
-    //    sei();
+       sei();
     while(1) {
+      clear();
       setCursor(0,0);
+      sendInteger(TCNT1); // o bien TCNT1
+      setCursor(1,0);
       sendInteger(N); // o bien TCNT1
-      N*=2;
       /* set pin 5 high to turn led on */
-      write(D13,HIGH);
-      _delay_ms(250);
+      //     write(D13,HIGH);
+      //      _delay_ms(250);
       /* set pin 5 low to turn led off */
-      writeLow(D13);
-      _delay_ms(250);
+      //      writeLow(D13);
+      _delay_ms(50);
     
         
     }
