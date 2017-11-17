@@ -2,11 +2,11 @@ CC=avr-gcc
 F_CPU=16000000L
 MMCU=atmega32u4
 P=m32u4
-NOMBRE=lcd
+NOMBRE=timer
 PUERTO=/dev/ttyACM0
 VELOCIDAD=57600
 PROTOCOLO=avr109
-LIBS=common.c lcd.c
+LIBS=common.c lcd.c timer.c
 OBJECTS=$(LIBS:.c=.o)
 
 

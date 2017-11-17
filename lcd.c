@@ -2,11 +2,12 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include "common.h"
+#include "lcd.h"
 #define LCD_START 2 //20ms
 
 #define miWait(c) _delay_ms(c)
 
-volatile int N = 0;
+
 void set4bits(int code){
     if(((code >> 0)&1) == 0)
 	writeLow(D4);
@@ -88,129 +89,71 @@ void sendInteger(long int ln){
 }
 
 int configureLCD(){
-    miWait(LCD_START);
+  pinOutput(D7);
+  pinOutput(D4);
+  pinOutput(D6);
+  pinOutput(D5);
+  pinOutput(D9);
+  pinOutput(D8);
 
-    writeLow(D8); 
-    set4bits(0b0011);
+  miWait(LCD_START);
 
-    send();
+  writeLow(D8); 
+  set4bits(0b0011);
 
-    miWait(5);
+  send();
+
+  miWait(5);
 
 
-    send();
+  send();
 
-    miWait(0.1);
+  miWait(0.1);
 
  
-    send();
+  send();
 
-    //miWait(1);
-    set4bits(0b0010);
-    miWait(0.04);
-
-
-    send();
-
-    miWait(0.05);
+  //miWait(1);
+  set4bits(0b0010);
+  miWait(0.04);
 
 
-    send();
+  send();
 
-    set4bits(0b1010);
+  miWait(0.05);
 
-    send();
-    miWait(0.05);
+
+  send();
+
+  set4bits(0b1010);
+
+  send();
+  miWait(0.05);
+}
+void returnHome(){
+    set4bits(0b0000);
+  send();
+  set4bits(0b0010);
+  send();
+  miWait(2.1);
+
+}
+
+void powerOn(void){
+  writeLow(D8);
+  set4bits(0b0000);
+  send();
+  set4bits(0b1111);
+  send();
+  miWait(0.05);
+
 }
 void clear(){
-    writeLow(D8);
-    set4bits(0);
-    send();
-    set4bits(1);
-    send();
-    miWait(2);
+  writeLow(D8);
+  set4bits(0);
+  send();
+  set4bits(1);
+  send();
+  miWait(2);
 
-}
-
-void setupTimer(int time){
-  TCCR1A = 0; //WGM
-  TCCR1B=0b00001100;//N=256
-  TCCR1C=0b00000000;
-  TIMSK1 |= (1<<1);
-  OCR1A=31249;// 1 Hz
-  //  PRR0 &= ~(1<<5); //Enable clock
-  //  sei();
-}
-void contador(){
-  write(D13,HIGH);
-  N++;
-}
-EMPTY_INTERRUPT(BADISR_vect);
-ISR(TIMER1_COMPA_vect){
-  write(D13,HIGH);
-  contador();
- }
-
-ISR(TIMER1_CAPT_vect,ISR_ALIASOF(TIMER1_COMPA_vect));
-ISR(TIMER1_OVF_vect,ISR_ALIASOF(TIMER1_COMPA_vect));
-
-
-
-
-int main(){
-  //    D8 RS
-  //    D9 E
-  //    DDRC |= (1<<7);
-    pinOutput(D7);
-    pinOutput(D4);
-    pinOutput(D6);
-    pinOutput(D5);
-    pinOutput(D9);
-    pinOutput(D8);
-
-    configureLCD();
-
-
-    //return home
-    set4bits(0b0000);
-    send();
-    set4bits(0b0010);
-    send();
-    miWait(2.1);
-
-    //    Power on
-    writeLow(D8);
-    set4bits(0b0000);
-    send();
-    set4bits(0b1111);
-    send();
-    miWait(0.05);
-
-    clear();
-    setCursor(0,7);
-    sendInteger(1);
-    //    Mueve el cursor a la siguiente linea
-  
-    miWait(0.04);
-    setCursor(1,0);  
-    sendString("Miguel & Daniel");
-    N=1;
-    setupTimer(1);
-       sei();
-    while(1) {
-      clear();
-      setCursor(0,0);
-      sendInteger(TCNT1); // o bien TCNT1
-      setCursor(1,0);
-      sendInteger(N); // o bien TCNT1
-      /* set pin 5 high to turn led on */
-      //     write(D13,HIGH);
-      //      _delay_ms(250);
-      /* set pin 5 low to turn led off */
-      //      writeLow(D13);
-      _delay_ms(50);
-    
-        
-    }
-    return 0;
 }
