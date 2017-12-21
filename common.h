@@ -1,6 +1,6 @@
 #ifndef COMMON_H_
 #define COMMON_H_
-
+#include "Arduino.h"
 
 #define D0 0
 #define D1 1
@@ -61,7 +61,7 @@ extern volatile unsigned char * const pin_value[NPORTS];
 extern volatile unsigned char * const port_value[NPORTS];
 void pinOutput(unsigned char);
 void pinInput(unsigned char);
-void pinMode(unsigned char,unsigned char);
+void pinModeN(unsigned char,unsigned char);
 void writeHigh(unsigned char);
 void writeLow(unsigned char);
 void write(unsigned char, unsigned char);

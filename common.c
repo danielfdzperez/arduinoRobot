@@ -1,5 +1,6 @@
 
 #include<avr/io.h>
+#include "Arduino.h"  
 #include "common.h"
 
 const unsigned char pin_bit[NPORTS]=
@@ -20,7 +21,7 @@ void pinOutput(unsigned char pin){
 void pinInput(unsigned char pin){
     *DDRX(pin) &= (~PIN_BIT(pin));
 }
-void pinMode(unsigned char pin,unsigned char mode){
+void pinModeN(unsigned char pin,unsigned char mode){
     switch(mode){
 	case INPUT:
 	    pinInput(pin);

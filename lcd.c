@@ -14,32 +14,68 @@ void set4bits(int code){
     else
 	writeHigh(D4);
     if(((code >> 1)&1) == 0)
-	writeLow(D5);
+	writeLow(A3);
     else
-	writeHigh(D5);
+	writeHigh(A3);
     if(((code >> 2)&1) == 0)
-	writeLow(D6);
+	writeLow(A2);
     else
-	writeHigh(D6);
+	writeHigh(A2);
     if(((code >> 3)&1) == 0)
 	writeLow(D7);
     else
 	writeHigh(D7);
 }
-void send(){
-    writeHigh(D9);
-    writeLow(D9);
+void lcdSend(){
+    writeHigh(A1);
+    writeLow(A1);
 }
 void send8bits(unsigned char code){
   //Se envía la parte alta:
   set4bits(0x0f & (code >>4));
-  send();
+  lcdSend();
   _delay_us(40);
   //Se envía la parte baja:
   set4bits(code & 0x0F);
-  send();
+  lcdSend();
     _delay_us(40);
 }
+
+void sen8bitsAsincrono(unsigned char code, DatosEnviar * estructura){
+  if(estructura->parte == alta){
+      set4bits(0x0f & (code >>4));
+      lcdSend();
+      estructura->parte = baja;
+  }else{
+      //Se envía la parte baja:
+      set4bits(code & 0x0F);
+      lcdSend();
+      estructura->parte = alta;
+  }
+  estructura->espera = 40;
+  estructura->tActual = 0;
+}
+
+int sendNumberAsincrono(unsigned int code, DatosEnviar * estructura){
+  int ret = code;
+  if(estructura->parte == baja)
+    ret = code / 10;
+  sen8bitsAsincrono('0' + (code % 10),estructura);
+    
+  return ret;
+}
+
+int setCursorAsincrono(int f, int c, DatosEnviar * estructura){
+  int ret = 0;
+  if(estructura->parte == baja)
+    ret = 1;
+  int addr;
+  addr = f*0x40+c;
+  writeLow(D8);
+  sen8bitsAsincrono(1<<7 | (0x7F & addr), estructura);
+  return ret;
+}
+
 void sendCharacter(char character){
     //TODO coger el valor del registro y guardarlo.
     //Hacer un getValue en common
@@ -63,10 +99,10 @@ void setCursor(int f, int c){
   addr = f*0x40+c;
   writeLow(D8);
   send8bits(1<<7 | (0x7F & addr));
-  _delay_us(40);
-  writeLow(D8);
-  send8bits(1<<7 | (0x7F & addr));
-  _delay_us(37);
+  //_delay_us(40);
+  //writeLow(D8);
+  //send8bits(1<<7 | (0x7F & addr));
+  //_delay_us(37);
 }
 
 long int closest10Pow(long int n){
@@ -88,12 +124,17 @@ void sendInteger(long int ln){
 
 }
 
-int configureLCD(){
+int configureLCD(DatosEnviar * estructura){
+
+  estructura->parte = alta;
+  estructura->espera = 0;
+  estructura->tActual = 0;
+
   pinOutput(D7);
   pinOutput(D4);
-  pinOutput(D6);
-  pinOutput(D5);
-  pinOutput(D9);
+  pinOutput(A2);
+  pinOutput(A3);
+  pinOutput(A1);
   pinOutput(D8);
 
   miWait(LCD_START);
@@ -101,40 +142,41 @@ int configureLCD(){
   writeLow(D8); 
   set4bits(0b0011);
 
-  send();
+  lcdSend();
 
   miWait(5);
 
 
-  send();
+  lcdSend();
 
   miWait(0.1);
 
  
-  send();
+  lcdSend();
 
   //miWait(1);
   set4bits(0b0010);
   miWait(0.04);
 
 
-  send();
+  lcdSend();
 
   miWait(0.05);
 
 
-  send();
+  lcdSend();
 
   set4bits(0b1010);
 
-  send();
+  lcdSend();
   miWait(0.05);
+
 }
 void returnHome(){
-    set4bits(0b0000);
-  send();
+  set4bits(0b0000);
+  lcdSend();
   set4bits(0b0010);
-  send();
+  lcdSend();
   miWait(2.1);
 
 }
@@ -142,18 +184,18 @@ void returnHome(){
 void powerOn(void){
   writeLow(D8);
   set4bits(0b0000);
-  send();
+  lcdSend();
   set4bits(0b1111);
-  send();
+  lcdSend();
   miWait(0.05);
 
 }
 void clear(){
   writeLow(D8);
   set4bits(0);
-  send();
+  lcdSend(); 
   set4bits(1);
-  send();
+  lcdSend();
   miWait(2);
 
 }
