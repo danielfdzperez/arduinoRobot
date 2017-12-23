@@ -17,5 +17,6 @@ int configureLCD(DatosEnviar *);
 void clear(void);
 void returnHome(void);
 void powerOn(void);
+void escribirIzq(void);
 
 #endif

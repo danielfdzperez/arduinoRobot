@@ -1,4 +1,4 @@
-#include <avr/io.h>
+  #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include "common.h"
@@ -60,6 +60,7 @@ int sendNumberAsincrono(unsigned int code, DatosEnviar * estructura){
   int ret = code;
   if(estructura->parte == baja)
     ret = code / 10;
+  writeHigh(D8);
   sen8bitsAsincrono('0' + (code % 10),estructura);
     
   return ret;
@@ -173,6 +174,7 @@ int configureLCD(DatosEnviar * estructura){
 
 }
 void returnHome(){
+  writeLow(D8);
   set4bits(0b0000);
   lcdSend();
   set4bits(0b0010);
@@ -181,11 +183,20 @@ void returnHome(){
 
 }
 
+void escribirIzq(){
+  writeLow(D8);
+  set4bits(0);
+  lcdSend();
+  set4bits(0b0100);
+  lcdSend();
+  miWait(0.05);
+}
+
 void powerOn(void){
   writeLow(D8);
   set4bits(0b0000);
   lcdSend();
-  set4bits(0b1111);
+  set4bits(0b1100);//Sin blink de cursor. Poner 1 al final para blink.
   lcdSend();
   miWait(0.05);
 
