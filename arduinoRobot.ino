@@ -10,37 +10,62 @@ extern "C"{
 /*Variables para controlar los estados del lcd*/
 DatosEnviar datosInternosEnvio;
   
+
+  
+/*
+ *    enviado => Se ha enviado la parte baja del mensaje y por ende todo el mensaje
+ *    enviando => Se ha enviado la parte alta del mensaje
+ *    enviar => Se debe enviar el mensaje
+ *    fin => El mensaje ya ha sido enviado
+ *    preparado => El LCD ya esta listo para enviar otro mensaje
+ *
+ */
 enum TlcdStatus {enviado, enviando, enviar, fin, preparado};
+enum TlcdStatus lcdStatus = enviar;
+/*
+ *    mover => Se debe mover el cursor
+ *    moviendo => Se ha enviado la parte alta de la orden para mover el cursor
+ *    movido => Se ha enviado la parte baja de la orden y el cursor se ha movido
+ *    quieto => No se esta realizando ninguna accion sobre el cursor
+ *
+ */
 enum TmovimientoCursor {mover, moviendo, movido, quieto};
 enum TmovimientoCursor movimientoCursor = quieto;
-enum TlcdStatus lcdStatus = enviar;
 
-int cifras = 3;
-int distancia = 0;
-int distanciaAnterior = 0;
-int distanciaImprimir = 0;
+int cifras = 3;//Cantida de cifras a mostrar
+int distancia = 0;//Distancia actual
+int distanciaAnterior = 0;//Distancia mostrada anteriormente
+int distanciaImprimir = 0;//Distancia que se esta o se debe imprimir
 /*-----------------------------------------------------------------*/
 
 /*Variables de control de PING*/
-volatile unsigned long tPulsoEcho = 0;
-volatile int totalPing = 0;
-volatile int tPulsoPing = 0;
+volatile unsigned long tPulsoEcho = 0;//Tiempo para hacer el echo
+volatile int totalPing = 0;//Tiempo total del ping. A los 60ms se debe hacer algo
+volatile int tPulsoPing = 0;//Tiempo del pulso de respuesta de ping
+
+/*
+ *
+ * nada => No se espera nada.
+ * recibir => Se espera recibir echo
+ * recibido => Se ha recibido toda la señal del echo
+ * respuesta => Gestionar la respuesta del echo recibida
+ * bloqueo => Bloquea enviar mas peticiones de echo
+ */
 enum TpingStatus {nada,recibir,recibido,respuesta,bloqueo};
 volatile enum TpingStatus recibiendo = nada;
 //volatile int recibiendo = 0;//0-> No se espera nada. 1-> Se espera recibir echo. 2-> Echo recibido. 3-> Gestionar respuesta. 4 -> Estado de bloqueo
-volatile int tiempo = 0;
-int pulso = 0;
-unsigned char triggerPort = D9;
+volatile int tiempo = 0;//Tiempo de la señal de echo recibida
+int pulso = 0;//Si se envio un pulso para peticion de echo
+unsigned char triggerPort = D9;//Pin donde esta el trigger
 /*------------------------------------------------------------------*/
 
 //Prepara el LCD
 void prepararLCD(){
-    configureLCD(&datosInternosEnvio);
+  configureLCD(&datosInternosEnvio);
   
   clear();
   returnHome();
   powerOn();
-  
   
   setCursor(0,2);
   sendString("Distancia cm");
@@ -62,7 +87,7 @@ void configurarTimer0(){
 
 void configurarPing(){
   pinOutput(triggerPort);
-    //Habilita interrupciones INT0, para recibir el echo
+  //Habilita interrupciones INT0, para recibir el echo
   EICRA = 1;
   EIMSK = 1;
   
@@ -71,17 +96,13 @@ void configurarPing(){
 void setup() {
   Serial.begin(57600);
   while (!Serial);
-
   prepararLCD();
   configurarPing();
-
   configurarTimer0();
-  
-
-
 }
 
 ISR(TIMER0_COMPA_vect){
+  //Incrementa las variables que estan asociadas a este contador
   datosInternosEnvio.tActual ++;
   tPulsoEcho ++;
   totalPing ++;
@@ -104,40 +125,50 @@ ISR(INT0_vect){
 }
 
 void lcdControl(){
+
+  //Si tiene que enviar un mensaje
   if(lcdStatus == enviar){
      distanciaImprimir = sendNumberAsincrono(distanciaImprimir,&datosInternosEnvio);
      lcdStatus = enviando;
      //Serial.println("enviar");
   }
   
+  //Parte baja del mensaje a enviar
   if(lcdStatus == enviando && datosInternosEnvio.tActual >= datosInternosEnvio.espera/10){
     distanciaImprimir = sendNumberAsincrono(distanciaImprimir,&datosInternosEnvio);
     lcdStatus = enviado;
     //Serial.println("enviando");
   }
+
+  //Envio todo el mensaje
   if(lcdStatus == enviado && datosInternosEnvio.tActual >= datosInternosEnvio.espera/10){
     lcdStatus = fin;
     cifras --;
     //Serial.println("enviado");
   }
 
+  //Comienza a mover el cursor
   if(movimientoCursor == mover){
     //Serial.println("mover");
     movimientoCursor = moviendo;
     setCursorAsincrono(1, 8, &datosInternosEnvio);
   }
+
+  //Parte baja para mover el cursor
   if(movimientoCursor == moviendo && datosInternosEnvio.tActual >= datosInternosEnvio.espera/10){
     setCursorAsincrono(1, 8, &datosInternosEnvio);
     movimientoCursor = movido;
     //Serial.println("moviendo");
   }
+
+  //Ha movido el cursor
   if(movimientoCursor == movido && datosInternosEnvio.tActual >= datosInternosEnvio.espera/10){
     movimientoCursor = quieto;
     //Serial.println("movido");
   }
   
-
-
+  //Si ha acabado de enviar un numero y aun quedan cifras envia otro numero
+  //Sino mueve el cursor
   if(lcdStatus == fin){
     if(cifras)
       lcdStatus = enviar;
@@ -148,6 +179,7 @@ void lcdControl(){
     } 
   }
 
+  //Si ya envio todo el numero y el cursor esta en su sitio y ha cambiado la distancia envia la nueva distancia
   if(lcdStatus == preparado && movimientoCursor == quieto && distanciaAnterior != distancia){
     cifras = 3;
     distanciaImprimir = distancia;
@@ -156,8 +188,10 @@ void lcdControl(){
   }
 }
 
+//Gestion del ping, recibe la direccion de la distancia para que la use el lcd
 void pingControl(int * distancia){
   
+   //Si tiene que hacer una peticion y no envio el pulso aun
    if(!pulso && recibiendo==nada){
      
     //Comenzar a enviar la peticion de echo
@@ -167,6 +201,8 @@ void pingControl(int * distancia){
     tPulsoPing = 0;
     totalPing = 0;
   }
+
+  //Ya comenzo la peticion y debe bajar la señal
   if(pulso && tPulsoPing >= 1){
    
     //Fin peticion echo
@@ -175,6 +211,8 @@ void pingControl(int * distancia){
     recibiendo = recibir;
     totalPing = 0;
   }
+
+  //Se ha recibido la respuesta y se debe gestionar
   if(recibiendo == respuesta){
      
     //Echo recibido
@@ -185,6 +223,8 @@ void pingControl(int * distancia){
     tiempo = 0;
     tPulsoEcho = 0;
   }
+
+  //El tiempo del ping fue mayor de 60ms
   if(totalPing >= 6000){
     //Fin tiempo de espera para el siguiente echo
     recibiendo = nada;

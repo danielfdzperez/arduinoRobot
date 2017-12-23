@@ -14,13 +14,26 @@ volatile unsigned char * const pin_value[NPORTS]={&PIND,&PIND,&PIND,&PIND,&PIND,
 volatile unsigned char * const port_value[NPORTS]={&PORTD,&PORTD,&PORTD,&PORTD,&PORTD,&PORTC,&PORTD, &PORTE, &PORTB, &PORTB, &PORTB, &PORTB, &PORTD,&PORTC, &PORTF, &PORTF, &PORTF, &PORTF, &PORTF, &PORTF};
 
 
+/*
+ * Pone un pin en modo OUTPUT
+ */
 void pinOutput(unsigned char pin){
     *DDRX(pin) |= PIN_BIT(pin);
 }
 
+/*
+ * Pine un pin en modo INPUT
+ */
 void pinInput(unsigned char pin){
     *DDRX(pin) &= (~PIN_BIT(pin));
 }
+
+/*
+ * Selecciona en que modo poner un pin.
+ *
+ * pin => pin al que cambiar el modo
+ * mode => Modo en que se pone INPUT o OUTPUT
+ */
 void pinModeN(unsigned char pin,unsigned char mode){
     switch(mode){
 	case INPUT:
@@ -33,12 +46,30 @@ void pinModeN(unsigned char pin,unsigned char mode){
 }
 
 
+/*
+ *
+ * Pone a alto el pin deseado
+ */
 void writeHigh(unsigned char pin){
     *PORTX(pin) |= PIN_BIT(pin);
 }
+
+/*
+ *
+ * Pone a bajo el pin deseado
+ *
+ */
 void writeLow(unsigned char pin){
     *PORTX(pin) &= (~PIN_BIT(pin));
 }
+
+/*
+ *
+ * Pone a alto o a bajo un pin
+ *
+ * pin => El pin que debe ponerse a alto
+ * mode => Modo HIGH o LOW
+ */
 void write(unsigned char pin,unsigned char mode){
     switch(mode){
 	case LOW:
@@ -50,6 +81,7 @@ void write(unsigned char pin,unsigned char mode){
     }
 }
 
+//Lee el valor que hay en uno de los pines
 unsigned char read(unsigned char pin){
     return *PINX(pin) & PIN_BIT(pin);
 }

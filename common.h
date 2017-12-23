@@ -2,6 +2,7 @@
 #define COMMON_H_
 #include "Arduino.h"
 
+//Define las macros de los pines
 #define D0 0
 #define D1 1
 #define D2 2
@@ -22,8 +23,9 @@
 #define A3 17
 #define A4 18
 #define A5 19
-#define NPORTS 20
+#define NPORTS 20 //Numero de pines
 
+//Macros para acciones en los pines
 #define D0_BIT (1 << 2)
 #define D1_BIT (1 << 3)
 #define D2_BIT (1 << 1)
@@ -49,13 +51,16 @@
 #define DDRX(pin) (ddr_value[pin])
 #define PORTX(pin) (port_value[pin])
 #define PINX(pin) (pin_value[pin])
+
+//Modos para gestionar los pines
 #define LOW 0
 #define HIGH 1
 #define OUTPUT 0
 #define INPUT 1
 
 
-extern const unsigned char pin_bit[NPORTS];
+extern const unsigned char pin_bit[NPORTS];//Bit en el registro que corresponde a cada pin.
+//Acceso a los registros de cada pin.
 extern volatile unsigned char * const ddr_value[NPORTS];
 extern volatile unsigned char * const pin_value[NPORTS];
 extern volatile unsigned char * const port_value[NPORTS];
