@@ -6,6 +6,7 @@ extern "C"{
 
 #include<avr/io.h>
 
+volatile unsigned int muestreo = 0;//Saber cuando muestrear los botones
 
 /*Variables para controlar los estados del lcd*/
 DatosEnviar datosInternosEnvio;
@@ -59,6 +60,9 @@ int pulso = 0;//Si se envio un pulso para peticion de echo
 unsigned char triggerPort = D9;//Pin donde esta el trigger
 /*------------------------------------------------------------------*/
 
+int analogico = 0;
+volatile unsigned char conversionRealizada = 0;
+
 //Prepara el LCD
 void prepararLCD(){
   configureLCD(&datosInternosEnvio);
@@ -93,20 +97,47 @@ void configurarPing(){
   
 }
 
+void configurarConversorAnalogico(){
+  ADMUX = 0;
+  ADMUX = (1<<REFS1) | (1<<REFS0) | 7; //Uso de 2.35V internos y tomar muestras de A0
+
+  ADCSRA = 0;
+  ADCSRB = 0;//(1<<ADTS1) | (1<<ADTS0);
+  //ADCSRA = (1<<ADEN) | (1<<ADATE) | (1<<ADIE) | (1<<ADSC);//Habilita conversiones, auto trigger, habilita interrupciones
+  ADCSRA = (1<<ADEN) | (1<<ADIE);
+  ADCSRA |= (1<<ADSC);
+}
+
 void setup() {
   Serial.begin(57600);
   while (!Serial);
   prepararLCD();
   configurarPing();
   configurarTimer0();
+  configurarConversorAnalogico();
 }
 
+volatile unsigned char e = 0;
 ISR(TIMER0_COMPA_vect){
+  if(conversionRealizada == 0){
+    e = 1;
+    /*Importante esto sirve para que otras interrupciones funcionen. 
+      Pero si hay muchas cada poco tiempo las distancias salen mal medidas.*/
+    TIMSK0 ^= (1<<OCIE0A);//Deshabilitar interrupciones del timer0
+    sei();//Habilitar interrupciones, asi se pueden anidar.
+  }
   //Incrementa las variables que estan asociadas a este contador
   datosInternosEnvio.tActual ++;
   tPulsoEcho ++;
   totalPing ++;
   tPulsoPing ++;
+  muestreo ++;
+  if(e == 1){
+    e = 0;
+    /*Habilitar otra vez las interrupciones del TIMER0, antes deshabilitar las interrupciones globales.*/
+    cli();
+    TIMSK0 ^= (1<<OCIE0A);
+  }
 }
 
 //Captura interrupcion del echo
@@ -122,6 +153,11 @@ ISR(INT0_vect){
       recibiendo = respuesta;     
     }
       
+}
+
+ISR(ADC_vect){
+  //Serial.println("INTERRUPCION");
+  conversionRealizada = 1;
 }
 
 void lcdControl(){
@@ -233,6 +269,17 @@ void pingControl(int * distancia){
 }
 
 void loop() {
+
+  //Los botones no hay que mirarlos todo el rato porque solo sera al principio.
+  //Esta puesto las interrupciones del TIMER0 pero no es necesario todo lo que le he puesto. Porque se hara por estados del robot.
+  if(conversionRealizada && muestreo > 50000){
+    muestreo = 0;
+    conversionRealizada = 0;
+    analogico = ADC;
+    //Serial.println("ENTRO");
+    Serial.println(analogico);
+    ADCSRA |= (1<<ADSC);
+  }
   
   pingControl(&distancia);
   lcdControl();
