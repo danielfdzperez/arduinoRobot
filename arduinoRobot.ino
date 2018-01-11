@@ -6,7 +6,7 @@ extern "C"{
 
 #include<avr/io.h>
 
-enum TestadosRobot {botones, buscarPared, girarDerecha, girarIzq, seguirParedIzq, seguirParedDerecha, paredEnfrente, sinParedIzq, sinParedDerecha};
+enum TestadosRobot {botones, buscarPared, girarDerecha, girarIzq, seguirParedIzq, seguirParedDerecha, paredEnfrenteIzq,paredEnfrenteDerecha, sinParedIzq, sinParedDerecha};
 enum TestadosRobot estadoRobot = botones;
 volatile unsigned int tiempo = 0;//tiempo que se usa en ping y muestrear al principio 10us Timer0
 
@@ -58,6 +58,8 @@ int distanciaImprimir = 0;//Distancia que se esta o se debe imprimir
 volatile unsigned long tPulsoEcho = 0;//Tiempo para hacer el echo
 volatile unsigned int totalPing = 0;//Tiempo total del ping. A los 60ms se debe hacer algo
 volatile unsigned int tPulsoPing = 0;//Tiempo del pulso de respuesta de ping
+
+unsigned char echo = 0;//0 no se ha tomado echo. 1 Se ha toamdo echo.
 
 /*
  * PING
@@ -149,23 +151,25 @@ void configurarConversorAnalogico(){
 }
 
 void configurarServo(){
- pinOutput(D10);//DDRB |= 1 << 6; // Pin 10 Output
- TCCR1A =(1 << COM1B1); // output OC1B
- TCCR1B = (1<<WGM13) | (1<<CS11); // PFC with prescaler 8
- TCCR1C = 0;
- ICR1 = TOPSERVO;
- OCR1B = 10000; // Duty Cycle 50%
- TIMSK1 = 0; // Deshabilitar interrupciones del timer
+ pinOutput(D5);//DDRB |= 1 << 6; // Pin 10 Output
+ TCCR3A =(1 << COM3A1); // output OC1B
+ TCCR3B = (1<<WGM33) | (1<<CS31); // PFC with prescaler 8
+ TCCR3C = 0;
+ ICR3 = TOPSERVO;
+ //OCR1B = 10000; // Duty Cycle 50%
+ OCR3A = 10000;
+ TIMSK3 = 0; // Deshabilitar interrupciones del timer
  angleToServo(estadoServo);
  _delay_ms(1000);
- pinInput(D10);
+ pinInput(D5);
 }
 /** Procedimiento  msToServo: establece el tiempo del pulso
  * que se envía al servo a ms milisegundos.
  */
 void msToServo(double ms){ 
   int valor = (int)1500*ms;
-  OCR1B = valor;
+  //OCR1B = valor;
+  OCR3A = valor;
 }
 /** Procedimiento angleToservo: establece el ángulo al que
  * debe moverse y mantener el servo.
@@ -177,10 +181,12 @@ void angleToServo(double angle){
 }
 
 void girarServo(){
-  //Serial.println(estadoServo);
   switch(estadoRobot){
+    
+    
     case buscarPared:
-    case paredEnfrente:
+    case paredEnfrenteIzq:
+    case paredEnfrenteDerecha:
       if(estadoServo != centro){
         estadoServo = centro;
         angleToServo(estadoServo);
@@ -210,6 +216,7 @@ void girarServo(){
         angleToServo(estadoServo);
       }
     break;
+    
     case girarIzq:
     case sinParedIzq:
       if(estadoServo != izquierda){
@@ -360,7 +367,7 @@ void pingControl(int * distancia){
   
    //Si tiene que hacer una peticion y no envio el pulso aun
    if(!pulso && recibiendo==nada){
-     
+     echo = 0;
     //Comenzar a enviar la peticion de echo
     //PORTB |= (1<<5);
     writeHigh(triggerPort);
@@ -382,13 +389,17 @@ void pingControl(int * distancia){
 
   //Se ha recibido la respuesta y se debe gestionar
   if(recibiendo == respuesta){
-     
+     echo = 1;
     //Echo recibido
     recibiendo = bloqueo;  
     totalPing = 0;
     //Serial.println(tiempo/10);
     *distancia = tiempoEcho/10-2;
-    Serial.println(*distancia);
+    if(*distancia <= 0){
+      echo = 0;
+      *distancia = 100;
+    }
+    //Serial.println(*distancia);
     tiempoEcho = 0;
     //tPulsoEcho = 0;
     tiempo = 0;
@@ -402,12 +413,13 @@ void pingControl(int * distancia){
     totalPing = 0;
     //tiempoServo = 0;
     tiempo = 0;
-    pinOutput(D10);
+    pinOutput(D5);
     girarServo();
   }
+  
   if(recibiendo == finalizado && tiempo >= 30000/*tiempoServo >= 100000*/){
     if(contadorServo >= 2){
-      pinInput(D10);
+      pinInput(D5);
       //tiempoServo = 0;
       tiempo = 0;
       recibiendo = nada;
@@ -423,19 +435,26 @@ Tboton valorBoton(unsigned int valor){
   //if((valor == 511 || valor == 255) || (valor == 1023) || (valor <= 1010 && valor >= 1015) || (valor <= 520 && valor >= 500))
   if(valor >= 490 && valor <= 500)
     return right;
-  if(valor <= 1014 && valor >= 990)
+  if(valor <= 1014 && valor >= 990  )
     return left;
-  return other;
+  //return other;
+  return left;
 }
 
 void logicaRobot(){
    if(estadoRobot == botones && botonPulsado != other){
+    Serial.println("buscar pared");
     mensajeDistancia();
     estadoRobot = buscarPared;
     return;
   }
 
+   if(!echo)
+    return;
+   echo = 0;
+
   if(estadoRobot == buscarPared && distancia <= 30){
+    Serial.println("girar");
     if(botonPulsado == right)
       estadoRobot = girarDerecha;
     if(botonPulsado == left)
@@ -448,31 +467,49 @@ void logicaRobot(){
     return;
   }
   if(estadoRobot == girarIzq && distancia >= 30){
+    Serial.println("seguir pared izq");
     estadoRobot = seguirParedIzq;
     return;
   }
 
   if( (estadoRobot == seguirParedIzq || estadoRobot == seguirParedDerecha) && estadoServo == centro && distancia <= 30){
-    estadoRobot = paredEnfrente;
+    Serial.println("pared enfrente");
+    estadoRobot = paredEnfrenteIzq;
+    return;
+  }
+  if( estadoRobot == seguirParedDerecha && estadoServo == centro && distancia <= 30){
+    Serial.println("pared enfrente");
+    estadoRobot = paredEnfrenteDerecha;
     return;
   }
 
   if(estadoRobot == seguirParedIzq && estadoServo == izquierda && distancia > 40){
-    estadoRobot == sinParedIzq;
+    Serial.println("sin pared izq");
+    estadoRobot = sinParedIzq;
     return;
   }
   
   if(estadoRobot == seguirParedDerecha && estadoServo == derecha && distancia > 40){
-    estadoRobot == sinParedDerecha;
+    estadoRobot = sinParedDerecha;
     return;
   }
 
   if(estadoRobot == sinParedIzq && distancia <= 40){
+    Serial.println("seguir pared izq");
     estadoRobot = seguirParedIzq;
     return;
   }
   
   if(estadoRobot == sinParedDerecha && distancia <= 40){
+    estadoRobot = seguirParedDerecha;
+    return;
+  }
+
+  if(estadoRobot == paredEnfrenteIzq && distancia >= 30){
+    estadoRobot = seguirParedIzq;
+    return;
+  }
+  if(estadoRobot == paredEnfrenteDerecha && distancia >= 30){
     estadoRobot = seguirParedDerecha;
     return;
   }
@@ -495,6 +532,8 @@ void loop() {
     //Serial.println(conversionRealizada);
     Serial.println(analogico);
   }
+
+//Serial.println(estadoRobot);
 
  logicaRobot();
   
