@@ -1,0 +1,149 @@
+// Biblioteca para el control Proporcional, Integral, Diferencial
+#include <PID_v1.h>
+
+// Constantes del PID (Halladas experimentalmente)
+#define Ki 0.11
+#define Kp 0.099
+#define Kd 0.0003
+
+// Pines para control del canal 1,2 del puente h
+#define H1_1 1  // A4, PINF
+#define H2_1 0  // A5, PINF
+#define EN_1 6  //D10, PINB,OC1B
+// Pin del ecoder
+
+#define EC_1 1 // D2, PIND, INT1
+
+// Pines para control del canal 3,4 del puente h
+#define H1_2 2  // D0, PIND
+#define H2_2 6  // D12, PIND
+#define EN_2 7  //D11, PINB,OC1C
+// Pin del ecoder
+
+#define EC_2 3 // D3, PIND, INT3
+
+
+
+ double pulsos_1 = 0;
+ double antiguo_1 = 0;
+ double incremento_1 = 0;
+ double pulsos_1b = 0;
+double antiguo_1b = 0;
+double incremento_1b = 0;
+
+double distancia = 0;
+
+double ciclo_trabajo_1 = 0;
+double ciclo_trabajo_1b = 0;
+ double ciclo_trabajo_2 = 0;
+ double distancia_objetivo = 30;
+ double objetivo_1 = 300;
+
+
+PID PID1(&incremento_1,&ciclo_trabajo_1,&objetivo_1, Kp, Ki,Kd,DIRECT);
+PID PID1b(&incremento_1b,&ciclo_trabajo_1b,&objetivo_1, Kp, Ki,Kd,DIRECT);
+PID PID2(&distancia,&ciclo_trabajo_2,&distancia_objetivo, Kp, Ki,Kd,DIRECT);
+int normalizar(double n){
+  return (int)( n * (400.0/255.0)) + 275;//
+}
+int ajuste(double n){
+  return normalizar(n)-275;
+}
+int medirDistancia(){
+  return 30;
+}
+
+void setup(){
+  DDRF |= (1 << H1_1) | (1 << H2_1); // Control del puente H a Output
+  DDRD |= (1 << H1_2) | (1 << H2_2); // Control del puente H a Output
+  DDRB |= (1 << EN_1); // Pin de enable del puente H a Output
+  DDRB |= (1 << EN_2); // Pin de enable del puente H a Output
+  DDRD &= ~(1<<EC_1); // Pin de lectura del encoder a Input
+  DDRD &= ~(1<<EC_2); // Pin de lectura del encoder a Input
+  
+  PID1.SetMode(AUTOMATIC);
+  PID1b.SetMode(AUTOMATIC);
+  PID2.SetMode(AUTOMATIC);
+
+  //  Serial.begin(57600);
+  // Colocar direccion
+  PORTF |= (1<<H1_1);
+  PORTF &= ~(1 << H2_1);
+
+
+  PORTD |= (1<<H1_2);
+  PORTD &= ~(1 << H2_2);
+
+  /******************************************************/
+  /****** Configuración del pin de enable con PWM *******/
+  /************** Se utiliza timer 1 ********************/
+  /******************************************************/
+  /******************************************************/
+
+
+  /** Modo correcto en fase y frecuencia -> WGM3:0 = 8  */
+
+  //COM1x a 0 cuando subiendo y a 1 cuando bajando->2
+  TCCR1A = (1<<COM1C1)|(1<<COM1B1);
+
+  // Modo correcto en fase y frecuencia con TOP en ICRn, prescaler de 1
+  TCCR1B = (1<<WGM13)|(1<<CS10);
+  TCCR1C = 0;
+  ICR1 = 400;
+  //TIMSK1 = (1<<OCIE
+  /** Ciclo de trabajo del motor a 0% inicialmente*/
+
+  OCR1B = 0;
+  OCR1C = 0;
+
+  /** Interrupcion del encoder */
+
+  EICRA = (1 << ISC10)|(1<<ISC30); // INT activo con los flancos
+  EIMSK = (1 << INT1)|(1<<INT3); // Desenmascarar INT
+
+
+
+
+}
+
+void loop(){
+  antiguo_1 = pulsos_1;
+  antiguo_1b = pulsos_1b;
+  //antiguo_2 = pulsos_2;
+  // ...
+
+  //
+ //Serial.println(incremento_1);
+
+  //Cambiar ciclo_trabajo_i mediante el cálculo del PID
+  PID1.Compute();
+  PID1b.Compute();
+  PID2.Compute();
+  
+  OCR1B = normalizar(ciclo_trabajo_1);   //normalizar(ciclo_trabajo_1);
+  OCR1C = normalizar(ciclo_trabajo_1b) + ajuste(ciclo_trabajo_2);
+// Serial.println(OCR1C);
+  //PORTB |= (1<<EN_1);
+  //digitalWrite(9,HIGH);
+  _delay_ms(300);
+  incremento_1 = (pulsos_1 - antiguo_1);
+  incremento_1b = (pulsos_1b - antiguo_1b);
+  //incremento_2 = (pulsos_2 - antiguo_2);
+  distancia = medirDistancia();
+}
+
+
+/**
+ * Handler para la interrupción INT1:
+ * Incrementar el numero de pulsos de encoder que se han detectado
+ */
+ISR(INT1_vect){
+  pulsos_1++;
+}
+/**
+ * Handler para la interrupción INT2:
+ * Incrementar el numero de pulsos de encoder que se han detectado
+ */
+ISR(INT3_vect){
+  pulsos_1b++;
+}
