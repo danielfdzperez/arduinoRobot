@@ -26,11 +26,17 @@
 ** Puente en H (L293D)
    Un puente en H es un componente que se utiliza para controlar la dirección
    en la que gira un motor.
-   [[https://www.prometec.net/wp-content/uploads/2015/03/L293D_Skeleton.jpg]]
+   [[http://www.geekbotelectronics.com/wp-content/uploads/2014/07/l293d-3.png]]
+<<<<<<< HEAD
 
    De esta forma, para cada uno de los canales si el enable está activado y
    los dos inputs valen 1 y 0, respectivamente, el motor girará en una
    dirección, mientras que si valen 0 y 1, girará en la otra.
+=======
+   De esta forma, si el enable está activado y los dos inputs valen 1 y 0,
+   respectivamente, el motor girará en una dirección, mientras que si valen
+   0 y 1, girará en la otra.
+>>>>>>> 6906360de2b3d32b106f173ea07f705ed4c8779a
 ** Motor con encoder
 ** Medidor de distancia (HC-SR04)
 ** Esquema de conexión
