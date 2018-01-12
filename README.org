@@ -34,3 +34,8 @@
 ** Control del servo
 ** Medición de la distancia
 * Referencias
+
+  - https://www.arduino.cc/en/uploads/Main/arduino-leonardo-schematic_3b.pdf
+  - http://www.datsi.fi.upm.es/docencia/Informatica_Industrial/DMC/pdf/atmega32u4.pdf
+  - https://www.sparkfun.com/datasheets/LCD/HD44780.pdf
+  - https://www.pololu.com/blog/17/servo-control-interface-in-detail
