@@ -1,0 +1,36 @@
+* Resumen
+  Se trata del proyecto de un robot cuya funcionalidad consiste en avanzar
+  hasta que encuentra una pared y, una vez la encuentra, seguirla, girando
+  a la derecha o la izquierda en función de qué haya seleccionado el usuario.
+* Componentes físicos
+** Arduino Leonardo (ATMega 32u4)
+   Arduino Leonardo es una placa de desarrollo basada en el chip ATMega 32u4.
+   Las características más relevantes para este proyecto son:
+   - 4 timers con capacidad para PWM (dos de ellos de 16 bits)
+   - Soporte para interrupciones
+     - Externas: Flanco o nivel en un pin.
+     - De timer: Interrupción periódica.
+   - Conversor analógico-digital de 10 bits.
+
+** Pantalla LCD con controlador hd44780u
+   El controlador de la pantalla LCD sigue un protocolo documentado y permite
+   utilizar una interfaz de 4 u 8 bits para comunicarse con él.
+** Servomotor
+   Un servomotor es un motor que se coloca y mantiene una posición que se le
+   comunica mediante un pulso de duración variable a una frecuencia de 50Hz.
+
+   Dicho pulso debe tener una duración entre 1 ms y 2 ms. Si el pulso tiene
+   una duración de 1 ms, el servomotor se coloca en la posición 0º. El ángulo
+   aumenta proporcionalmente a la duración del pulso hasta llegar a los 180º
+   correspondientes a una duración de 2 ms.
+** Puente H (L293D)
+** Motor con encoder
+** Medidor de distancia (HC-SR04)
+** Esquema de conexión
+* Componentes lógicos
+** Máquina de estados
+** Control de los motores
+** Control del LCD
+** Control del servo
+** Medición de la distancia
+* Referencias
