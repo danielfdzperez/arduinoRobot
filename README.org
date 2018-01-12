@@ -23,7 +23,13 @@
    una duración de 1 ms, el servomotor se coloca en la posición 0º. El ángulo
    aumenta proporcionalmente a la duración del pulso hasta llegar a los 180º
    correspondientes a una duración de 2 ms.
-** Puente H (L293D)
+** Puente en H (L293D)
+   Un puente en H es un componente que se utiliza para controlar la dirección
+   en la que gira un motor.
+   [[rsc/L293D.jpg]]
+   De esta forma, si el enable está activado y los dos inputs valen 1 y 0,
+   respectivamente, el motor girará en una dirección, mientras que si valen
+   0 y 1, girará en la otra.
 ** Motor con encoder
 ** Medidor de distancia (HC-SR04)
 ** Esquema de conexión
@@ -34,8 +40,8 @@
 ** Control del servo
 ** Medición de la distancia
 * Referencias
-
   - https://www.arduino.cc/en/uploads/Main/arduino-leonardo-schematic_3b.pdf
   - http://www.datsi.fi.upm.es/docencia/Informatica_Industrial/DMC/pdf/atmega32u4.pdf
   - https://www.sparkfun.com/datasheets/LCD/HD44780.pdf
   - https://www.pololu.com/blog/17/servo-control-interface-in-detail
+  - http://www.ti.com/lit/ds/symlink/l293.pdf
