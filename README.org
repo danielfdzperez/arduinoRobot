@@ -19,6 +19,8 @@
    Un servomotor es un motor que se coloca y mantiene una posición que se le
    comunica mediante un pulso de duración variable a una frecuencia de 50Hz.
 
+[[https://a.pololu-files.com/picture/0J3288.250.jpg?125f7d4d55b005d1b9e048b12a88fed7]]
+
    Dicho pulso debe tener una duración entre 1 ms y 2 ms. Si el pulso tiene
    una duración de 1 ms, el servomotor se coloca en la posición 0º. El ángulo
    aumenta proporcionalmente a la duración del pulso hasta llegar a los 180º
@@ -32,7 +34,18 @@
    respectivamente, el motor girará en una dirección, mientras que si valen
    0 y 1, girará en la otra.
 ** Motor con encoder
+   Se han utilizado dos motores iguales,con reductora de forma que tienen una
+   velocidad de  100rpm y con encoders acoplados que aportan 823 pulsos por
+   revolución.
 ** Medidor de distancia (HC-SR04)
+   El sensor HC-SR04 utiliza ultrasonidos para medir la distancia que le separa
+   de un cuerpo.
+
+   El módulo consta de dos pines para comunicación, llamados trigger y echo. Para
+   iniciar una medición, se envía un pulso de 10 microsegundos a nivel alto al pin
+   de trigger y a continuación se mide la duración del pulso a nivel alto que envía
+   el pin de echo. Para traducir esta duración a una distancia en centímetros se
+   divide la duración en microsegundos entre 58.
 ** Esquema de conexión
 * Componentes lógicos
 ** Máquina de estados
@@ -46,3 +59,5 @@
   - https://www.sparkfun.com/datasheets/LCD/HD44780.pdf
   - https://www.pololu.com/blog/17/servo-control-interface-in-detail
   - http://www.ti.com/lit/ds/symlink/l293.pdf
+  - http://www.datsi.fi.upm.es/docencia/Informatica_Industrial/DMC/motores_banggood.pdf
+  - http://www.micropik.com/PDF/HCSR04.pdf
