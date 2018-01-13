@@ -1,4 +1,4 @@
-//#include <SoftwareSerial.h>
+#include <SoftwareSerial.h>
 #include <PID_v1.h>
 extern "C"{
   #include "common.h"
@@ -18,6 +18,7 @@ volatile unsigned int tiempo = 0;//tiempo que se usa en ping y muestrear al prin
  */
 enum Tboton {right, left, other};
 enum Tboton botonPulsado = other;
+//enum Tboton botonPulsado = left;
 volatile unsigned int muestreo = 0;//Saber cuando muestrear los botones
 
 int analogico = 0;
@@ -88,6 +89,7 @@ unsigned char triggerPort = D9;//Pin donde esta el trigger
  #define TOPSERVO 20000
  enum TestadoServo {derecha = -90, izquierda = 90, centro = 0};
  enum TestadoServo estadoServo = centro;
+ enum TestadoServo proximoEstadoServo = centro;
  
  /*------------------------------------------------------------------*/
 
@@ -125,15 +127,18 @@ double incremento_1b = 0;
 double ciclo_trabajo_1 = 0;
 double ciclo_trabajo_1b = 0;
 double ciclo_trabajo_2 = 0;
+#define OBJETIVO 300
 double distancia_objetivo = 30;
-double objetivo_1 = 200;
+double distancia_pid = distancia;
+double objetivo_1 = OBJETIVO;
+double objetivo_2 = OBJETIVO;
 
 volatile uint16_t * ruedaIzquierda = &OCR1B;
 volatile uint16_t * ruedaDerecha = &OCR1C;
 
 PID PID1(&incremento_1,&ciclo_trabajo_1,&objetivo_1, Kp, Ki,Kd,DIRECT);//
-PID PID1b(&incremento_1b,&ciclo_trabajo_1b,&objetivo_1, Kp, Ki,Kd,DIRECT);//
-PID PID2((double *)&distancia,&ciclo_trabajo_2,&distancia_objetivo, Kp, Ki,Kd,DIRECT);//
+PID PID1b(&incremento_1b,&ciclo_trabajo_1b,&objetivo_2, Kp, Ki,Kd,DIRECT);//
+PID PID2(&distancia_pid,&ciclo_trabajo_2,&distancia_objetivo, 0.01,0.1,0.1,REVERSE);//
 /*------------------------------------------------------------------*/
 
 //Funciones para los motores
@@ -141,7 +146,7 @@ int normalizar(double n){
   return (int)( n * (400.0/255.0)) + 275;//
 }
 int ajuste(double n){
-  return normalizar(n)-275;
+  return (int)( n * (400.0/255.0))-200;
 }
 
 void setupMotores(){
@@ -188,8 +193,8 @@ void setupMotores(){
   OCR1C = 0;//Rueda derecha
 
   /** Interrupcion del encoder */
-  EICRA |= (1 << ISC10)|(1<<ISC30); // INT activo con los flancos
-  EIMSK |= (1 << INT1)|(1<<INT3); // Desenmascarar INT
+  //EICRA |= (1 << ISC10)|(1<<ISC30); // INT activo con los flancos
+  //EIMSK |= (1 << INT1)|(1<<INT3); // Desenmascarar INT
 }
 
 
@@ -239,17 +244,18 @@ void configurarPing(){
   //Habilita interrupciones INT0, para recibir el echo
   EICRA |= 1;
   EIMSK |= 1;
-  
 }
 
 void configurarConversorAnalogico(){
+ pinInput(A0);
   ADMUX = 0;
-  ADMUX = (1<<REFS1) | (1<<REFS0) | 7; //Uso de 2.35V internos y tomar muestras de A0
-
+  //ADMUX = (1<<REFS1) | (1<<REFS0) | 7; //Uso de 2.35V internos y tomar muestras de A0
+  ADMUX = (1<<REFS0) | 7;
   ADCSRA = 0;
   ADCSRB = 0;//(1<<ADTS1) | (1<<ADTS0);
   //ADCSRA = (1<<ADEN) | (1<<ADATE) | (1<<ADIE) | (1<<ADSC);//Habilita conversiones, auto trigger, habilita interrupciones
-  ADCSRA = (1<<ADEN) | (1<<ADIE);
+  //ADCSRA = (1<<ADEN);// | (1<<ADIE);
+  ADCSRA = (1<<ADEN) | (1<<ADIE) | 7;
   ADCSRA |= (1<<ADSC);
 }
 
@@ -291,40 +297,42 @@ void girarServo(){
     case paredEnfrenteIzq:
     case paredEnfrenteDerecha:
       if(estadoServo != centro){
-        estadoServo = centro;
-        angleToServo(estadoServo);
+        //estadoServo = centro;
+        //angleToServo(estadoServo);
+        proximoEstadoServo = centro;
+        angleToServo(proximoEstadoServo);
       }
     break;
     
     case seguirParedIzq:
       if(estadoServo == centro)
-        estadoServo = derecha;
+        proximoEstadoServo = derecha;
       else if(estadoServo == derecha)
-        estadoServo = centro;
-      angleToServo(estadoServo);
+        proximoEstadoServo = centro;
+       angleToServo(proximoEstadoServo);
     break;
     
     case seguirParedDerecha:
       if(estadoServo == centro)
-        estadoServo = izquierda;
+        proximoEstadoServo = izquierda;
       else if(estadoServo == izquierda)
-        estadoServo = centro;
-      angleToServo(estadoServo);
+        proximoEstadoServo = centro;
+      angleToServo(proximoEstadoServo);
     break;
 
     case girarDerecha:
     case sinParedDerecha:
       if(estadoServo != izquierda){
-        estadoServo = izquierda;
-        angleToServo(estadoServo);
+        proximoEstadoServo = izquierda;
+        angleToServo(proximoEstadoServo);
       }
     break;
     
     case girarIzq:
     case sinParedIzq:
       if(estadoServo != derecha){
-        estadoServo = derecha;
-        angleToServo(estadoServo);
+        proximoEstadoServo = derecha;
+        angleToServo(proximoEstadoServo);
       }
     break;
   }
@@ -343,8 +351,12 @@ void girarServo(){
   angleToServo(estadoServo);*/
 }
 
+void servoEnPosicion(){
+  estadoServo = proximoEstadoServo;
+}
+
 void setup() {
-  //Serial.begin(57600);
+  Serial.begin(57600);
   //while (!Serial);
   EICRA = 0;
   EIMSK = 0;
@@ -352,20 +364,20 @@ void setup() {
   mensajeBotones();
   configurarServo();
   configurarPing();
-  configurarTimer0();
+  //configurarTimer0();
   configurarConversorAnalogico();
   setupMotores();
 }
 
 volatile unsigned char e = 0;
 ISR(TIMER0_COMPA_vect){
-  if(conversionRealizada == 0){
+  /*if(conversionRealizada == 0){
     e = 1;
     //Importante esto sirve para que otras interrupciones funcionen. 
     //  Pero si hay muchas cada poco tiempo las distancias salen mal medidas.
     TIMSK0 ^= (1<<OCIE0A);//Deshabilitar interrupciones del timer0
     sei();//Habilitar interrupciones, asi se pueden anidar.
-  }
+  }*/
   //Incrementa las variables que estan asociadas a este contador
   tiempo ++;
   datosInternosEnvio.tActual ++;
@@ -375,12 +387,12 @@ ISR(TIMER0_COMPA_vect){
   tPulsoPing ++;
   tiempoServo ++;
   muestreo ++;*/
-  if(e == 1){
+  /*if(e == 1){
     e = 0;
     //Habilitar otra vez las interrupciones del TIMER0, antes deshabilitar las interrupciones globales.
     cli();
     TIMSK0 ^= (1<<OCIE0A);
-  }
+  }*/
 }
 
 //Captura interrupcion del echo
@@ -544,6 +556,8 @@ void pingControl(int * distancia){
   if(recibiendo == finalizado && tiempo >= 30000/*tiempoServo >= 100000*/){
     if(contadorServo >= 3){
       pinInput(D5);
+      servoEnPosicion();
+      echo = 0;
       //tiempoServo = 0;
       tiempo = 0;
       recibiendo = nada;
@@ -557,22 +571,59 @@ void pingControl(int * distancia){
 
 Tboton valorBoton(unsigned int valor){
   //if((valor == 511 || valor == 255) || (valor == 1023) || (valor <= 1010 && valor >= 1015) || (valor <= 520 && valor >= 500))
-  //if(valor >= 490 && valor <= 500)
-  //  return right;
-  if(valor <= 1014 && valor >= 990  )
+  if(valor == 0)
+    return right;
+  if(valor <= 484 && valor >= 480) 
     return left;
-  return left;
+  //return left;
+  return other;
 }
 
 
 //PID.SetControllerDirection(DIRECT/REVERSE);
-
+double controlador(){
+  double dis = 2*(distancia_pid - distancia_objetivo);
+  Serial.println(distancia_pid);
+  Serial.println(dis);
+  Serial.println();
+  if(dis < -100)
+    dis = -100;
+  if(dis > 100)
+    dis = 100;
+  return dis;
+}
 void logicaMotores(){
 
+/*Falta estados para la distancia*/
+
+  if(echo){
+    switch(estadoRobot){
+      case buscarPared:
+      case paredEnfrenteIzq:
+      case paredEnfrenteDerecha:
+        if(estadoServo == centro)
+          distancia_pid = distancia;
+        break;
+      case girarIzq:
+      case seguirParedIzq:
+      case sinParedIzq:
+        if(estadoServo == derecha){
+          distancia_pid = distancia;
+          //Serial.println("SDAFSDF");
+        }
+        break;
+      case girarDerecha:
+      case seguirParedDerecha:
+      case sinParedDerecha:
+        if(estadoServo == izquierda)
+          distancia_pid = distancia;
+        break; 
+    }
+  }
+  
   PID1.Compute();
   PID1b.Compute();
-  PID2.Compute();
-  
+  //PID2.Compute();  
 
   switch(estadoRobot){
   case buscarPared:
@@ -580,24 +631,68 @@ void logicaMotores(){
       *ruedaDerecha = normalizar(ciclo_trabajo_1b);
       break;
   case girarIzq:
-  case seguirParedIzq:
-  case sinParedIzq:
-  case paredEnfrenteIzq:
-    *ruedaIzquierda = normalizar(ciclo_trabajo_1) + ajuste(ciclo_trabajo_2);
+    ciclo_trabajo_2 = 0;
+    *ruedaIzquierda = 0;//normalizar(ciclo_trabajo_1) + ciclo_trabajo_2;//+ ajuste(ciclo_trabajo_2);
     *ruedaDerecha = normalizar(ciclo_trabajo_1b);
     break;
+      case seguirParedIzq:
+        ciclo_trabajo_2 = controlador() + 50;
+        *ruedaIzquierda = normalizar(ciclo_trabajo_1); //+ ciclo_trabajo_2;//+ ajuste(ciclo_trabajo_2);
+        *ruedaDerecha = normalizar(ciclo_trabajo_1b);
+        break;
+  case paredEnfrenteIzq:
+        ciclo_trabajo_2 = 0;
+        *ruedaIzquierda = 0;//normalizar(ciclo_trabajo_1) + ciclo_trabajo_2;//+ ajuste(ciclo_trabajo_2);
+        *ruedaDerecha = normalizar(ciclo_trabajo_1b);
+    break;
+    
+    case sinParedIzq:
+      ciclo_trabajo_2 = 100;
+      *ruedaIzquierda = normalizar(ciclo_trabajo_1) + ciclo_trabajo_2;//+ ajuste(ciclo_trabajo_2);
+      //Serial.println(ciclo_trabajo_2);
+      *ruedaDerecha = normalizar(ciclo_trabajo_1b);
+      break;
+      
+        case girarDerecha:
+    ciclo_trabajo_2 = 0;
+      *ruedaDerecha = 0;//normalizar(ciclo_trabajo_1) + ciclo_trabajo_2;//+ ajuste(ciclo_trabajo_2);
+      *ruedaIzquierda = normalizar(ciclo_trabajo_1);
+    break;
+      case seguirParedDerecha:
+        ciclo_trabajo_2 = controlador() + 50;
+        *ruedaDerecha = normalizar(ciclo_trabajo_1b); //+ ciclo_trabajo_2;//+ ajuste(ciclo_trabajo_2);
+        *ruedaIzquierda = normalizar(ciclo_trabajo_1);
+        break;
+  case paredEnfrenteDerecha:
+        ciclo_trabajo_2 = 0;
+        *ruedaDerecha = 0;//normalizar(ciclo_trabajo_1) + ciclo_trabajo_2;//+ ajuste(ciclo_trabajo_2);
+        *ruedaIzquierda = normalizar(ciclo_trabajo_1);
+    break;
+    case sinParedDerecha:
+      ciclo_trabajo_2 = 100;
+      *ruedaDerecha = normalizar(ciclo_trabajo_1b) + ciclo_trabajo_2;//+ ajuste(ciclo_trabajo_2);
+      //Serial.println(ciclo_trabajo_2);
+      *ruedaIzquierda = normalizar(ciclo_trabajo_1);
+      break;
   }
+
+  
 
   //Cambiar ciclo_trabajo_i mediante el cálculo del PID
   incremento_1 = (pulsos_1 - antiguo_1);
   incremento_1b = (pulsos_1b - antiguo_1b);
 }
-
+int l = 0;
 void logicaRobot(){
  
    if(estadoRobot == botones && botonPulsado != other){
     //Serial.println("buscar pared");
     mensajeDistancia();
+
+    //Habilitar interrupciones encoders
+    EICRA |= (1 << ISC10)|(1<<ISC30); // INT activo con los flancos
+    EIMSK |= (1 << INT1)|(1<<INT3); // Desenmascarar INT
+    configurarTimer0();
     estadoRobot = buscarPared;
     return;
   }
@@ -606,82 +701,81 @@ void logicaRobot(){
     return;
 
 
-  if(estadoRobot == buscarPared && distancia <= 30){
+  if(estadoRobot == buscarPared && distancia <= distancia_objetivo){
     //Serial.println("girar");
     if(botonPulsado == right){
       estadoRobot = girarDerecha;
     }
     if(botonPulsado == left){
-      PID2.SetControllerDirection(DIRECT);
+     // PID2.SetControllerDirection(DIRECT);
       estadoRobot = girarIzq;
     }
     return;
   }
 
-  if(estadoRobot == girarDerecha && distancia >= 30){
+  if(estadoRobot == girarDerecha && distancia <= distancia_objetivo+10 && estadoServo == izquierda){
     estadoRobot = seguirParedDerecha;
     return;
   }
-  if(estadoRobot == girarIzq && distancia >= 30){
+  if(estadoRobot == girarIzq && distancia <= distancia_objetivo+10 && estadoServo == derecha){
+    /*if(l < 3){
+      l ++;
+      return;
+    }*/
     //Serial.println("seguir pared izq");
-     PID2.SetControllerDirection(REVERSE);
+     //PID2.SetControllerDirection(REVERSE);
     estadoRobot = seguirParedIzq;
     return;
   }
 
-  if( (estadoRobot == seguirParedIzq || estadoRobot == seguirParedDerecha) && estadoServo == centro && distancia <= 30){
+  if( estadoRobot == seguirParedIzq && estadoServo == centro && distancia <= distancia_objetivo){
     //Serial.println("pared enfrente");
-    PID2.SetControllerDirection(REVERSE);
+    //PID2.SetControllerDirection(REVERSE);
     estadoRobot = paredEnfrenteIzq;
     return;
   }
-  if( estadoRobot == seguirParedDerecha && estadoServo == centro && distancia <= 30){
+  if( estadoRobot == seguirParedDerecha && estadoServo == centro && distancia <= distancia_objetivo){
     //Serial.println("pared enfrente");
     estadoRobot = paredEnfrenteDerecha;
     return;
   }
 
-  if(estadoRobot == seguirParedIzq && estadoServo == derecha && distancia > 40){
+  if(estadoRobot == seguirParedIzq && estadoServo == derecha && distancia > distancia_objetivo + 20){
     //Serial.println("sin pared izq");
-    PID2.SetControllerDirection(DIRECT);
+    //PID2.SetControllerDirection(REVERSE);
     estadoRobot = sinParedIzq;
     return;
   }
   
-  if(estadoRobot == seguirParedDerecha && estadoServo == izquierda && distancia > 40){
+  if(estadoRobot == seguirParedDerecha && estadoServo == izquierda && distancia > distancia_objetivo + 20){
     estadoRobot = sinParedDerecha;
     return;
   }
 
-  if(estadoRobot == sinParedIzq && distancia <= 40){
-    PID2.SetControllerDirection(REVERSE);
+  if(estadoRobot == sinParedIzq && distancia <=distancia_objetivo + 20 && estadoServo == derecha){
+    //PID2.SetControllerDirection(REVERSE);
     //Serial.println("seguir pared izq");
     estadoRobot = seguirParedIzq;
     return;
   }
   
-  if(estadoRobot == sinParedDerecha && distancia <= 40){
+  if(estadoRobot == sinParedDerecha && distancia <= distancia_objetivo + 20 && estadoServo == izquierda){
     estadoRobot = seguirParedDerecha;
     return;
   }
 
-  if(estadoRobot == paredEnfrenteIzq && distancia >= 30){
-    PID2.SetControllerDirection(REVERSE);
+  if(estadoRobot == paredEnfrenteIzq && distancia >= distancia_objetivo && estadoServo == centro){
+    //PID2.SetControllerDirection(REVERSE);
     estadoRobot = seguirParedIzq;
     return;
   }
-  if(estadoRobot == paredEnfrenteDerecha && distancia >= 30){
+  if(estadoRobot == paredEnfrenteDerecha && distancia >= distancia_objetivo && estadoServo == centro){
     estadoRobot = seguirParedDerecha;
     return;
   }
 }
 
-void loop() {
-
-  //Los botones no hay que mirarlos todo el rato porque solo sera al principio.
-  //Esta puesto las interrupciones del TIMER0 pero no es necesario todo lo que le he puesto. Porque se hara por estados del robot.
- 
-  if(conversionRealizada && tiempo > 30000 && estadoRobot == botones){
+void logicaBotones(){
     tiempo = 0;
     analogico = ADC;
     botonPulsado = valorBoton(analogico);
@@ -689,14 +783,18 @@ void loop() {
       conversionRealizada = 0;
       ADCSRA |= (1<<ADSC);
     }
-    ////Serial.println("ENTRO");
-    ////Serial.println(conversionRealizada);
-    //Serial.println(analogico);
-  }
+    //Serial.println("ENTRO");
+    //Serial.println(conversionRealizada);
+    Serial.println(analogico);
+}
 
-  //Serial.println(estadoRobot);
+void loop() {
+  if(conversionRealizada && estadoRobot == botones)
+    logicaBotones();
+
+    Serial.println(estadoRobot);
     logicaRobot();
-    
+  
   
   if(estadoRobot != botones){
     antiguo_1 = pulsos_1;
