@@ -113,7 +113,7 @@ unsigned char triggerPort = D9;//Pin donde esta el trigger
 #define H1_2 2  // D0, PIND
 #define H2_2 6  // D12, PIND
 #define EN_2 7  //D11, PINB,OC1C
-// Pin del ecoder
+// Pin del ecoder 
 
 #define EC_2 3 // D3, PIND, INT3
 
@@ -127,17 +127,23 @@ double incremento_1b = 0;
 double ciclo_trabajo_1 = 0;
 double ciclo_trabajo_1b = 0;
 double ciclo_trabajo_2 = 0;
-#define OBJETIVO 300
+#define VEL_OBJETIVO_MAX 300
+#define VEL_OBJETIVO_MIN 200
+double velocidad_objetivo = VEL_OBJETIVO_MAX;
 double distancia_objetivo = 30;
 double distancia_pid = distancia;
-double objetivo_1 = OBJETIVO;
-double objetivo_2 = OBJETIVO;
+double objetivo_1 = velocidad_objetivo;
+double objetivo_2 = velocidad_objetivo;
 
 volatile uint16_t * ruedaIzquierda = &OCR1B;
 volatile uint16_t * ruedaDerecha = &OCR1C;
 
-PID PID1(&incremento_1,&ciclo_trabajo_1,&objetivo_1, Kp, Ki,Kd,DIRECT);//
-PID PID1b(&incremento_1b,&ciclo_trabajo_1b,&objetivo_2, Kp, Ki,Kd,DIRECT);//
+PID PID1(&incremento_1,&ciclo_trabajo_1,&velocidad_objetivo, Kp, Ki,Kd,DIRECT);//
+PID PID1b(&incremento_1b,&ciclo_trabajo_1b,&velocidad_objetivo, Kp, Ki,Kd,DIRECT);//
+double obj = 30;
+double actual = 0;
+double actuador = 0;
+//PID PID2(&actual,&actuador,&obj, 0.01,0.1,0.1,REVERSE);
 PID PID2(&distancia_pid,&ciclo_trabajo_2,&distancia_objetivo, 0.01,0.1,0.1,REVERSE);//
 /*------------------------------------------------------------------*/
 
@@ -149,6 +155,11 @@ int ajuste(double n){
   return (int)( n * (400.0/255.0))-200;
 }
 
+unsigned long now = millis();
+unsigned long  lastTime = now;
+unsigned long timeChange = (now - lastTime);
+
+
 void setupMotores(){
   DDRF |= (1 << H1_1) | (1 << H2_1); // Control del puente H a Output
   DDRD |= (1 << H1_2) | (1 << H2_2); // Control del puente H a Output
@@ -156,10 +167,16 @@ void setupMotores(){
   DDRB |= (1 << EN_2); // Pin de enable del puente H a Output
   DDRD &= ~(1<<EC_1); // Pin de lectura del encoder a Input
   DDRD &= ~(1<<EC_2); // Pin de lectura del encoder a Input
+
+  now = millis();
+  timeChange = (now - lastTime);
+  //Serial.println(timeChange);
+  lastTime = now;
   
   PID1.SetMode(AUTOMATIC);
   PID1b.SetMode(AUTOMATIC);
   PID2.SetMode(AUTOMATIC);
+  //PID2.SetSampleTime(1);
 
   //  Serial.begin(57600);
   // Colocar direccion
@@ -290,6 +307,7 @@ void angleToServo(double angle){
 }
 
 void girarServo(){
+  pinOutput(D5);
   switch(estadoRobot){
     
     
@@ -352,6 +370,7 @@ void girarServo(){
 }
 
 void servoEnPosicion(){
+  pinInput(D5);
   estadoServo = proximoEstadoServo;
 }
 
@@ -549,13 +568,11 @@ void pingControl(int * distancia){
     totalPing = 0;
     //tiempoServo = 0;
     tiempo = 0;
-    pinOutput(D5);
     girarServo();
   }
   
-  if(recibiendo == finalizado && tiempo >= 30000/*tiempoServo >= 100000*/){
-    if(contadorServo >= 3){
-      pinInput(D5);
+  if(recibiendo == finalizado && tiempo >= 21000/*tiempoServo >= 100000*/){
+    if(contadorServo >= 1){
       servoEnPosicion();
       echo = 0;
       //tiempoServo = 0;
@@ -583,9 +600,9 @@ Tboton valorBoton(unsigned int valor){
 //PID.SetControllerDirection(DIRECT/REVERSE);
 double controlador(){
   double dis = 2*(distancia_pid - distancia_objetivo);
-  Serial.println(distancia_pid);
-  Serial.println(dis);
-  Serial.println();
+  //Serial.println(distancia_pid);
+  //Serial.println(dis);
+  //Serial.println();
   if(dis < -100)
     dis = -100;
   if(dis > 100)
@@ -620,10 +637,44 @@ void logicaMotores(){
         break; 
     }
   }
-  
+
+  switch(estadoRobot){
+    case buscarPared:
+        PID1.Compute();
+      PID1b.Compute();
+      break;
+    case seguirParedDerecha:
+    case seguirParedIzq:
+      PID1.Compute();
+      PID1b.Compute();
+      PID2.Compute();
+      break; 
+    case girarIzq:
+      PID1b.Compute();
+       break;
+    case paredEnfrenteIzq:
+      PID1b.Compute();
+      break;
+    case sinParedIzq:
+      PID1.Compute();
+      break;
+    case girarDerecha:
+      PID1.Compute();
+      break;
+    case paredEnfrenteDerecha:
+      PID1.Compute();
+      break;
+    case sinParedDerecha:
+      PID1b.Compute();
+      break;
+      
+  }
+
+  actual = distancia_pid * 2;
   PID1.Compute();
   PID1b.Compute();
-  //PID2.Compute();  
+  //Ciclo trabajo_1 PID_1
+  //Serial.println("------------------------");
 
   switch(estadoRobot){
   case buscarPared:
@@ -631,36 +682,33 @@ void logicaMotores(){
       *ruedaDerecha = normalizar(ciclo_trabajo_1b);
       break;
   case girarIzq:
-    ciclo_trabajo_2 = 0;
     *ruedaIzquierda = 0;//normalizar(ciclo_trabajo_1) + ciclo_trabajo_2;//+ ajuste(ciclo_trabajo_2);
     *ruedaDerecha = normalizar(ciclo_trabajo_1b);
     break;
       case seguirParedIzq:
-        ciclo_trabajo_2 = controlador() + 50;
-        *ruedaIzquierda = normalizar(ciclo_trabajo_1); //+ ciclo_trabajo_2;//+ ajuste(ciclo_trabajo_2);
+        //ciclo_trabajo_2 = controlador() + 50;
+        *ruedaIzquierda = normalizar(ciclo_trabajo_1); + ajuste(ciclo_trabajo_2);
         *ruedaDerecha = normalizar(ciclo_trabajo_1b);
         break;
   case paredEnfrenteIzq:
-        ciclo_trabajo_2 = 0;
         *ruedaIzquierda = 0;//normalizar(ciclo_trabajo_1) + ciclo_trabajo_2;//+ ajuste(ciclo_trabajo_2);
         *ruedaDerecha = normalizar(ciclo_trabajo_1b);
     break;
     
     case sinParedIzq:
-      ciclo_trabajo_2 = 100;
-      *ruedaIzquierda = normalizar(ciclo_trabajo_1) + ciclo_trabajo_2;//+ ajuste(ciclo_trabajo_2);
+      //ciclo_trabajo_2 = 100;
+      *ruedaIzquierda = normalizar(ciclo_trabajo_1) + ajuste(ciclo_trabajo_2);
       //Serial.println(ciclo_trabajo_2);
-      *ruedaDerecha = normalizar(ciclo_trabajo_1b);
+      *ruedaDerecha = 0;//normalizar(ciclo_trabajo_1b);
       break;
-      
         case girarDerecha:
-    ciclo_trabajo_2 = 0;
+      ciclo_trabajo_2 = 0;
       *ruedaDerecha = 0;//normalizar(ciclo_trabajo_1) + ciclo_trabajo_2;//+ ajuste(ciclo_trabajo_2);
       *ruedaIzquierda = normalizar(ciclo_trabajo_1);
     break;
-      case seguirParedDerecha:
-        ciclo_trabajo_2 = controlador() + 50;
-        *ruedaDerecha = normalizar(ciclo_trabajo_1b); //+ ciclo_trabajo_2;//+ ajuste(ciclo_trabajo_2);
+      case seguirParedDerecha: 
+        //ciclo_trabajo_2 = controlador() + 50;
+        *ruedaDerecha = normalizar(ciclo_trabajo_1b) + ajuste(ciclo_trabajo_2);
         *ruedaIzquierda = normalizar(ciclo_trabajo_1);
         break;
   case paredEnfrenteDerecha:
@@ -669,10 +717,10 @@ void logicaMotores(){
         *ruedaIzquierda = normalizar(ciclo_trabajo_1);
     break;
     case sinParedDerecha:
-      ciclo_trabajo_2 = 100;
-      *ruedaDerecha = normalizar(ciclo_trabajo_1b) + ciclo_trabajo_2;//+ ajuste(ciclo_trabajo_2);
+      //ciclo_trabajo_2 = 100;
+      *ruedaDerecha = normalizar(ciclo_trabajo_1b) + ajuste(ciclo_trabajo_2);
       //Serial.println(ciclo_trabajo_2);
-      *ruedaIzquierda = normalizar(ciclo_trabajo_1);
+      *ruedaIzquierda = 0;//normalizar(ciclo_trabajo_1);
       break;
   }
 
@@ -682,7 +730,7 @@ void logicaMotores(){
   incremento_1 = (pulsos_1 - antiguo_1);
   incremento_1b = (pulsos_1b - antiguo_1b);
 }
-int l = 0;
+
 void logicaRobot(){
  
    if(estadoRobot == botones && botonPulsado != other){
@@ -699,9 +747,9 @@ void logicaRobot(){
 
    if(!echo)
     return;
-
-
-  if(estadoRobot == buscarPared && distancia <= distancia_objetivo){
+    
+  if(estadoRobot == buscarPared && distancia <= distancia_objetivo+10){
+    velocidad_objetivo = VEL_OBJETIVO_MIN;
     //Serial.println("girar");
     if(botonPulsado == right){
       estadoRobot = girarDerecha;
@@ -714,62 +762,61 @@ void logicaRobot(){
   }
 
   if(estadoRobot == girarDerecha && distancia <= distancia_objetivo+10 && estadoServo == izquierda){
+    velocidad_objetivo = VEL_OBJETIVO_MAX;
     estadoRobot = seguirParedDerecha;
     return;
   }
   if(estadoRobot == girarIzq && distancia <= distancia_objetivo+10 && estadoServo == derecha){
-    /*if(l < 3){
-      l ++;
-      return;
-    }*/
+    velocidad_objetivo = VEL_OBJETIVO_MAX;
     //Serial.println("seguir pared izq");
      //PID2.SetControllerDirection(REVERSE);
     estadoRobot = seguirParedIzq;
     return;
   }
 
-  if( estadoRobot == seguirParedIzq && estadoServo == centro && distancia <= distancia_objetivo){
-    //Serial.println("pared enfrente");
-    //PID2.SetControllerDirection(REVERSE);
+  if( estadoRobot == seguirParedIzq && estadoServo == centro && distancia <= distancia_objetivo+10){
+    velocidad_objetivo = VEL_OBJETIVO_MIN;
     estadoRobot = paredEnfrenteIzq;
     return;
   }
-  if( estadoRobot == seguirParedDerecha && estadoServo == centro && distancia <= distancia_objetivo){
-    //Serial.println("pared enfrente");
+  if( estadoRobot == seguirParedDerecha && estadoServo == centro && distancia <= distancia_objetivo+10){
+    velocidad_objetivo = VEL_OBJETIVO_MIN;
     estadoRobot = paredEnfrenteDerecha;
     return;
   }
 
   if(estadoRobot == seguirParedIzq && estadoServo == derecha && distancia > distancia_objetivo + 20){
-    //Serial.println("sin pared izq");
-    //PID2.SetControllerDirection(REVERSE);
+    velocidad_objetivo = VEL_OBJETIVO_MIN;
     estadoRobot = sinParedIzq;
     return;
   }
   
   if(estadoRobot == seguirParedDerecha && estadoServo == izquierda && distancia > distancia_objetivo + 20){
+    velocidad_objetivo = VEL_OBJETIVO_MIN;
     estadoRobot = sinParedDerecha;
     return;
   }
 
-  if(estadoRobot == sinParedIzq && distancia <=distancia_objetivo + 20 && estadoServo == derecha){
-    //PID2.SetControllerDirection(REVERSE);
-    //Serial.println("seguir pared izq");
+  if(estadoRobot == sinParedIzq && distancia <= distancia_objetivo + 20 && estadoServo == derecha){
+    velocidad_objetivo = VEL_OBJETIVO_MAX;
     estadoRobot = seguirParedIzq;
     return;
   }
   
   if(estadoRobot == sinParedDerecha && distancia <= distancia_objetivo + 20 && estadoServo == izquierda){
+    velocidad_objetivo = VEL_OBJETIVO_MAX;
     estadoRobot = seguirParedDerecha;
     return;
   }
 
-  if(estadoRobot == paredEnfrenteIzq && distancia >= distancia_objetivo && estadoServo == centro){
+  if(estadoRobot == paredEnfrenteIzq && distancia >= distancia_objetivo+10 && estadoServo == centro){
+    velocidad_objetivo = VEL_OBJETIVO_MAX;
     //PID2.SetControllerDirection(REVERSE);
     estadoRobot = seguirParedIzq;
     return;
   }
-  if(estadoRobot == paredEnfrenteDerecha && distancia >= distancia_objetivo && estadoServo == centro){
+  if(estadoRobot == paredEnfrenteDerecha && distancia >= distancia_objetivo+10 && estadoServo == centro){
+    velocidad_objetivo = VEL_OBJETIVO_MAX;
     estadoRobot = seguirParedDerecha;
     return;
   }
@@ -785,14 +832,23 @@ void logicaBotones(){
     }
     //Serial.println("ENTRO");
     //Serial.println(conversionRealizada);
-    Serial.println(analogico);
+    //Serial.println(analogico);
 }
 
 void loop() {
   if(conversionRealizada && estadoRobot == botones)
     logicaBotones();
 
+    /*Serial.println(distancia_objetivo);
+    Serial.println(distancia_pid);
+    //Serial.println(actual);
+    //Serial.println(obj);
+    Serial.println(ciclo_trabajo_2);
+    Serial.println(actuador);
+    Serial.println("-------------------------------");*/
+    Serial.println(*ruedaDerecha);
     Serial.println(estadoRobot);
+    Serial.println("-------------------------------");
     logicaRobot();
   
   
