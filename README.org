@@ -61,7 +61,7 @@
    La velocidad de cada motor se controla, en principio, mediante un controlador
    PID. Este controlador trata de conseguir y mantener un número de pulsos de
    encoder mediante la modulación del ancho del pulso que se aporta a la alimentación
-   del motor, que se realiza a una frecuencia de 20KHz.
+   del motor.
 
    [[rsc/motores.png]]
 
@@ -71,12 +71,38 @@
    girar cuando se encuentra una esquina convexa, ya que se interpretaría que
    la distancia ha aumentado mucho y se daría más velocidad al motor para que girara.
 
+*** Medición de la velocidad
+    Un encoder de cada motor se conecta a uno de los pines de interrupción externa
+    de Arduino Leonardo. Así, manejando la interrupción de flanco en estos pines e
+    incrementando una variable global en ella, se puede contar el número de pulsos
+    que se han recibido entre dos instantes dados. En nuestro caso esos instantes son
+    el principio y el final del bucle.
+
+*** Generación del PWM
+    Como ya se ha explicado, la velocidad de los motores se controla mediante la
+    modulación del ancho del pulso que se aporta a la alimentación del motor.
+
+    Estos pulsos siguen una frecuencia de 20KHz y se generan utilizando el modo
+    correcto en fase y frecuencia de uno de los timer/counter de 16 bits del chip
+    ATMega32u4 y configurando el mismo timer/counter para que genere la forma de
+    onda por los pines de salida en lugar de habilitar interrupciones.
+
 ** Control del servomotor
    El servomotor hace girar al medidor de distancia, de forma que se pueda controlar
    la distancia a la pared que está en el lado y la que está al frente. Por esta
    razón, tiene que alternar entre mirar a 90º y 0º/180º (en función de qué pared
    siga) y comunicarse con el medidor de distancia para que sepa a cuál de las direcciones
    corresponde la medición que toma.
+
+** Medición de la distancia
+   Para medir la distancia se utiliza el sensor HC-SR04. Para medir la duración del
+   pulso de echo se utiliza una interrupción de flanco de subida en uno de los pines
+   de interrupción externa. En su manejador, se activa uno de los timer/counter
+   del chip ATMega32u4 en modo "Clear on compare match"(CTC) para medir el tiempo
+   y en el manejador de la interrupción que genera el timer se incrementa la variable
+   que mide el tiempo.
+
+
 
 * Referencias
   - https://www.arduino.cc/en/uploads/Main/arduino-leonardo-schematic_3b.pdf
