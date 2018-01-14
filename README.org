@@ -46,13 +46,38 @@
    de trigger y a continuación se mide la duración del pulso a nivel alto que envía
    el pin de echo. Para traducir esta duración a una distancia en centímetros se
    divide la duración en microsegundos entre 58.
-** Esquema de conexión
+** Conexión y montaje
+   [[rsc/esquema_conexion.png]]
 * Componentes lógicos
 ** Máquina de estados
+   [[rsc/estados.png]]
+
+   Inicialmente,el robot está parado y pide en la pantalla que el usuario seleccione
+   una sentido de giro. A continuación el robot se desplaza hacia el frente hasta que
+   encuentra una pared. Una vez la encuentra gira en el sentido que se ha seleccionado
+   y entra en un bucle en el que sigue la pared a una distancia fija y en línea recta
+   hasta que encuentra una esquina, gira la esquina y vuelve a seguir la pared.
 ** Control de los motores
-** Control del LCD
-** Control del servo
-** Medición de la distancia
+   La velocidad de cada motor se controla, en principio, mediante un controlador
+   PID. Este controlador trata de conseguir y mantener un número de pulsos de
+   encoder mediante la modulación del ancho del pulso que se aporta a la alimentación
+   del motor, que se realiza a una frecuencia de 20KHz.
+
+   [[rsc/motores.png]]
+
+   Como se puede observar en el diagrama, se utiliza otro controlador PID
+   para modificar la velocidad de uno de los motores de forma que el robot se
+   mantenga a la misma distancia de la pared. Además, este controlador sirve para
+   girar cuando se encuentra una esquina convexa, ya que se interpretaría que
+   la distancia ha aumentado mucho y se daría más velocidad al motor para que girara.
+
+** Control del servomotor
+   El servomotor hace girar al medidor de distancia, de forma que se pueda controlar
+   la distancia a la pared que está en el lado y la que está al frente. Por esta
+   razón, tiene que alternar entre mirar a 90º y 0º/180º (en función de qué pared
+   siga) y comunicarse con el medidor de distancia para que sepa a cuál de las direcciones
+   corresponde la medición que toma.
+
 * Referencias
   - https://www.arduino.cc/en/uploads/Main/arduino-leonardo-schematic_3b.pdf
   - http://www.datsi.fi.upm.es/docencia/Informatica_Industrial/DMC/pdf/atmega32u4.pdf
