@@ -127,8 +127,9 @@ double incremento_1b = 0;
 double ciclo_trabajo_1 = 0;
 double ciclo_trabajo_1b = 0;
 double ciclo_trabajo_2 = 0;
-#define VEL_OBJETIVO_MAX 300
-#define VEL_OBJETIVO_MIN 200
+#define VEL_OBJETIVO_MAX 160
+#define VEL_OBJETIVO_SEGUIR 160
+#define VEL_OBJETIVO_MIN 100
 double velocidad_objetivo = VEL_OBJETIVO_MAX;
 double distancia_objetivo = 30;
 double distancia_pid = distancia;
@@ -144,7 +145,7 @@ double obj = 30;
 double actual = 0;
 double actuador = 0;
 //PID PID2(&actual,&actuador,&obj, 0.01,0.1,0.1,REVERSE);
-PID PID2(&distancia_pid,&ciclo_trabajo_2,&distancia_objetivo, 0.01,0.1,0.1,REVERSE);//
+PID PID2(&distancia_pid,&ciclo_trabajo_2,&distancia_objetivo, 5,0.1,0.001,REVERSE);//
 /*------------------------------------------------------------------*/
 
 //Funciones para los motores
@@ -152,7 +153,8 @@ int normalizar(double n){
   return (int)( n * (400.0/255.0)) + 275;//
 }
 int ajuste(double n){
-  return (int)( n * (400.0/255.0))-200;
+  //return (int)( n * (400.0/255.0))-200;
+  return (int)( n * (400.0/100.0))-100;
 }
 
 unsigned long now = millis();
@@ -728,7 +730,14 @@ void logicaMotores(){
 
   //Cambiar ciclo_trabajo_i mediante el cálculo del PID
   incremento_1 = (pulsos_1 - antiguo_1);
+  
+  /*Serial.print(pulsos_1);
+  Serial.print(" - ");
+  Serial.print(antiguo_1);
+  Serial.print(" = ");
+  Serial.println(incremento_1);*/
   incremento_1b = (pulsos_1b - antiguo_1b);
+  
 }
 
 void logicaRobot(){
@@ -836,6 +845,12 @@ void logicaBotones(){
 }
 
 void loop() {
+  
+  if(estadoRobot != botones){
+    antiguo_1 = pulsos_1;
+    antiguo_1b = pulsos_1b;
+  }
+  
   if(conversionRealizada && estadoRobot == botones)
     logicaBotones();
 
@@ -846,15 +861,42 @@ void loop() {
     Serial.println(ciclo_trabajo_2);
     Serial.println(actuador);
     Serial.println("-------------------------------");*/
-    Serial.println(*ruedaDerecha);
-    Serial.println(estadoRobot);
-    Serial.println("-------------------------------");
+    /*
+    Serial.print(" ");
+    Serial.print(*ruedaIzquierda);
+    Serial.println();
+    //Serial.println(incremento_1);
+    Serial.print(incremento_1b);
+    Serial.print(" ");
+    Serial.print(incremento_1);
+    Serial.println();
+    //Serial.println(antiguo_1b);
+    //Serial.println(estadoRobot);*/
+    //Serial.print(ciclo_trabajo_1);
+    //Serial.print(" ");
+    //Serial.print(ciclo_trabajo_1b);
+    //Serial.print(" ");
+   /* Serial.println(ciclo_trabajo_2);
+    Serial.print(*ruedaIzquierda);
+    Serial.print(" ");
+    Serial.print(incremento_1);
+    Serial.print(" ");
+    Serial.print(*ruedaDerecha);
+    Serial.print(" ");
+    Serial.print(incremento_1b);
+    Serial.println();*/
+    /*unsigned long now = millis();
+    unsigned long timeChange = (now - principio);
+     Serial.print(timeChange);*/
+   
+   // Serial.println();
+   // Serial.println("-------------------------------");
     logicaRobot();
   
   
   if(estadoRobot != botones){
-    antiguo_1 = pulsos_1;
-    antiguo_1b = pulsos_1b;
+    //antiguo_1 = pulsos_1;
+    //antiguo_1b = pulsos_1b;
   
     pingControl(&distancia);
     lcdControl();
