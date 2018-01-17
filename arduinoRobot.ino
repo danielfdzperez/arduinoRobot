@@ -139,6 +139,9 @@ double objetivo_2 = velocidad_objetivo;
 volatile uint16_t * ruedaIzquierda = &OCR1B;
 volatile uint16_t * ruedaDerecha = &OCR1C;
 
+#define MAX_TIEMPO_PID 10000 //100ms. 100ms * 1000 = 100000 us. Como el timer son 10us 100000/10 = 10000.
+volatile unsigned int tiempo_pid = 0;
+
 PID PID1(&incremento_1,&ciclo_trabajo_1,&velocidad_objetivo, Kp, Ki,Kd,DIRECT);//
 PID PID1b(&incremento_1b,&ciclo_trabajo_1b,&velocidad_objetivo, Kp, Ki,Kd,DIRECT);//
 double obj = 30;
@@ -400,6 +403,7 @@ ISR(TIMER0_COMPA_vect){
     sei();//Habilitar interrupciones, asi se pueden anidar.
   }*/
   //Incrementa las variables que estan asociadas a este contador
+  tiempo_pid ++;
   tiempo ++;
   datosInternosEnvio.tActual ++;
   totalPing ++;
@@ -616,6 +620,7 @@ void logicaMotores(){
 /*Falta estados para la distancia*/
 
   if(echo){
+
     switch(estadoRobot){
       case buscarPared:
       case paredEnfrenteIzq:
@@ -640,6 +645,8 @@ void logicaMotores(){
     }
   }
 
+  if(tiempo_pid >= MAX_TIEMPO_PID){
+          tiempo_pid = 0;
   switch(estadoRobot){
     case buscarPared:
         PID1.Compute();
@@ -671,10 +678,11 @@ void logicaMotores(){
       break;
       
   }
+  }
 
   actual = distancia_pid * 2;
-  PID1.Compute();
-  PID1b.Compute();
+  //PID1.Compute();
+  //PID1b.Compute();
   //Ciclo trabajo_1 PID_1
   //Serial.println("------------------------");
 
