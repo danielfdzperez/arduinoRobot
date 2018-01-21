@@ -157,7 +157,11 @@ int normalizar(double n){
 }
 int ajuste(double n){
   //return (int)( n * (400.0/255.0))-200;
-  return (int)( n * (400.0/100.0))-100;
+  //return (int)( n * (400.0/100.0))-100;
+  if (n < 5){
+    return -100 + n*5;
+  }
+  return n + 100;
 }
 
 unsigned long now = millis();
@@ -647,6 +651,9 @@ void logicaMotores(){
 
   if(tiempo_pid >= MAX_TIEMPO_PID){
           tiempo_pid = 0;
+            //Cambiar ciclo_trabajo_i mediante el cálculo del PID
+  incremento_1 = pulsos_1;
+  incremento_1b = pulsos_1b;
   switch(estadoRobot){
     case buscarPared:
         PID1.Compute();
@@ -677,7 +684,10 @@ void logicaMotores(){
       PID1b.Compute();
       break;
       
-  }
+    }
+    pulsos_1 = 0;
+    pulsos_1b = 0;
+    
   }
 
   actual = distancia_pid * 2;
@@ -697,7 +707,7 @@ void logicaMotores(){
     break;
       case seguirParedIzq:
         //ciclo_trabajo_2 = controlador() + 50;
-        *ruedaIzquierda = normalizar(ciclo_trabajo_1); + ajuste(ciclo_trabajo_2);
+        *ruedaIzquierda = normalizar(ciclo_trabajo_1) + ajuste(ciclo_trabajo_2);
         *ruedaDerecha = normalizar(ciclo_trabajo_1b);
         break;
   case paredEnfrenteIzq:
@@ -709,10 +719,10 @@ void logicaMotores(){
       //ciclo_trabajo_2 = 100;
       *ruedaIzquierda = normalizar(ciclo_trabajo_1) + ajuste(ciclo_trabajo_2);
       //Serial.println(ciclo_trabajo_2);
-      *ruedaDerecha = 0;//normalizar(ciclo_trabajo_1b);
+      //*ruedaDerecha = normalizar(ciclo_trabajo_1b);
+      *ruedaDerecha = 0;
       break;
         case girarDerecha:
-      ciclo_trabajo_2 = 0;
       *ruedaDerecha = 0;//normalizar(ciclo_trabajo_1) + ciclo_trabajo_2;//+ ajuste(ciclo_trabajo_2);
       *ruedaIzquierda = normalizar(ciclo_trabajo_1);
     break;
@@ -722,7 +732,6 @@ void logicaMotores(){
         *ruedaIzquierda = normalizar(ciclo_trabajo_1);
         break;
   case paredEnfrenteDerecha:
-        ciclo_trabajo_2 = 0;
         *ruedaDerecha = 0;//normalizar(ciclo_trabajo_1) + ciclo_trabajo_2;//+ ajuste(ciclo_trabajo_2);
         *ruedaIzquierda = normalizar(ciclo_trabajo_1);
     break;
@@ -736,15 +745,13 @@ void logicaMotores(){
 
   
 
-  //Cambiar ciclo_trabajo_i mediante el cálculo del PID
-  incremento_1 = (pulsos_1 - antiguo_1);
-  
+
   /*Serial.print(pulsos_1);
   Serial.print(" - ");
   Serial.print(antiguo_1);
   Serial.print(" = ");
   Serial.println(incremento_1);*/
-  incremento_1b = (pulsos_1b - antiguo_1b);
+  
   
 }
 
@@ -854,10 +861,10 @@ void logicaBotones(){
 
 void loop() {
   
-  if(estadoRobot != botones){
+  /*if(estadoRobot != botones){
     antiguo_1 = pulsos_1;
     antiguo_1b = pulsos_1b;
-  }
+  }*/
   
   if(conversionRealizada && estadoRobot == botones)
     logicaBotones();
