@@ -131,7 +131,7 @@ double ciclo_trabajo_2 = 0;
 #define VEL_OBJETIVO_SEGUIR 160
 #define VEL_OBJETIVO_MIN 100
 double velocidad_objetivo = VEL_OBJETIVO_MAX;
-double distancia_objetivo = 40;
+double distancia_objetivo = 30;
 double distancia_pid = distancia;
 double objetivo_1 = velocidad_objetivo;
 double objetivo_2 = velocidad_objetivo;
@@ -363,19 +363,7 @@ void girarServo(){
       }
     break;
   }
-  /*if(estadoRobot == buscarPared){ 
-    if(estadoServo != centro){
-      estadoServo = centro;
-      angleToServo(estadoServo);
-    }
-    return;
-  }
-  if(estado)
-  if(estadoServo == centro)
-    estadoServo = derecha;
-  else if(estadoServo == derecha)
-    estadoServo = centro;
-  angleToServo(estadoServo);*/
+
 }
 
 void servoEnPosicion(){
@@ -384,7 +372,7 @@ void servoEnPosicion(){
 }
 
 void setup() {
-  Serial.begin(57600);
+  //Serial.begin(57600);
   //while (!Serial);
   EICRA = 0;
   EIMSK = 0;
@@ -399,29 +387,13 @@ void setup() {
 
 volatile unsigned char e = 0;
 ISR(TIMER0_COMPA_vect){
-  /*if(conversionRealizada == 0){
-    e = 1;
-    //Importante esto sirve para que otras interrupciones funcionen. 
-    //  Pero si hay muchas cada poco tiempo las distancias salen mal medidas.
-    TIMSK0 ^= (1<<OCIE0A);//Deshabilitar interrupciones del timer0
-    sei();//Habilitar interrupciones, asi se pueden anidar.
-  }*/
+
   //Incrementa las variables que estan asociadas a este contador
   tiempo_pid ++;
   tiempo ++;
   datosInternosEnvio.tActual ++;
   totalPing ++;
-  /*tPulsoEcho ++;
-  totalPing ++;
-  tPulsoPing ++;
-  tiempoServo ++;
-  muestreo ++;*/
-  /*if(e == 1){
-    e = 0;
-    //Habilitar otra vez las interrupciones del TIMER0, antes deshabilitar las interrupciones globales.
-    cli();
-    TIMSK0 ^= (1<<OCIE0A);
-  }*/
+
 }
 
 //Captura interrupcion del echo
@@ -610,9 +582,7 @@ Tboton valorBoton(unsigned int valor){
 //PID.SetControllerDirection(DIRECT/REVERSE);
 double controlador(){
   double dis = 2*(distancia_pid - distancia_objetivo);
-  //Serial.println(distancia_pid);
-  //Serial.println(dis);
-  //Serial.println();
+
   if(dis < -100)
     dis = -100;
   if(dis > 100)
@@ -620,8 +590,6 @@ double controlador(){
   return dis;
 }
 void logicaMotores(){
-
-/*Falta estados para la distancia*/
 
   if(echo){
 
@@ -744,14 +712,6 @@ void logicaMotores(){
   }
 
   
-
-
-  /*Serial.print(pulsos_1);
-  Serial.print(" - ");
-  Serial.print(antiguo_1);
-  Serial.print(" = ");
-  Serial.println(incremento_1);*/
-  
   
 }
 
@@ -771,9 +731,8 @@ void logicaRobot(){
 
    if(!echo)
     return;
-
-  //Distancia objetivo vale 40
-  if(estadoRobot == buscarPared && distancia <= distancia_objetivo){
+    
+  if(estadoRobot == buscarPared && distancia <= distancia_objetivo+10){
     velocidad_objetivo = VEL_OBJETIVO_MIN;
     //Serial.println("girar");
     if(botonPulsado == right){
@@ -786,74 +745,62 @@ void logicaRobot(){
     return;
   }
 
-  if(estadoRobot == girarDerecha && distancia <= distancia_objetivo && estadoServo == izquierda){
+  if(estadoRobot == girarDerecha && distancia <= distancia_objetivo+10 && estadoServo == izquierda){
     velocidad_objetivo = VEL_OBJETIVO_MAX;
-    distancia_objetivo = 20; //Cambia la distancia objetivo para estar mas cerca de la pared
     estadoRobot = seguirParedDerecha;
     return;
   }
-  if(estadoRobot == girarIzq && distancia <= distancia_objetivo && estadoServo == derecha){
+  if(estadoRobot == girarIzq && distancia <= distancia_objetivo+10 && estadoServo == derecha){
     velocidad_objetivo = VEL_OBJETIVO_MAX;
-    distancia_objetivo = 20;//Cambia la distancia objetivo para estar mas cerca de la pared
     //Serial.println("seguir pared izq");
      //PID2.SetControllerDirection(REVERSE);
     estadoRobot = seguirParedIzq;
     return;
   }
 
-  //Distancia objetivo es < 40 
-  if( estadoRobot == seguirParedIzq && estadoServo == centro && distancia <= distancia_objetivo+20){
+  if( estadoRobot == seguirParedIzq && estadoServo == centro && distancia <= distancia_objetivo+10){
     velocidad_objetivo = VEL_OBJETIVO_MIN;
-    distancia_objetivo = 40;
     estadoRobot = paredEnfrenteIzq;
     return;
   }
-  if( estadoRobot == seguirParedDerecha && estadoServo == centro && distancia <= distancia_objetivo+20){
+  if( estadoRobot == seguirParedDerecha && estadoServo == centro && distancia <= distancia_objetivo+10){
     velocidad_objetivo = VEL_OBJETIVO_MIN;
-    distancia_objetivo = 40;
     estadoRobot = paredEnfrenteDerecha;
     return;
   }
 
-  
   if(estadoRobot == seguirParedIzq && estadoServo == derecha && distancia > distancia_objetivo + 20){
     velocidad_objetivo = VEL_OBJETIVO_MIN;
-    distancia_objetivo = 50;
     estadoRobot = sinParedIzq;
     return;
   }
   
   if(estadoRobot == seguirParedDerecha && estadoServo == izquierda && distancia > distancia_objetivo + 20){
     velocidad_objetivo = VEL_OBJETIVO_MIN;
-    distancia_objetivo = 50;
     estadoRobot = sinParedDerecha;
     return;
   }
 
-  if(estadoRobot == sinParedIzq && distancia <= distancia_objetivo && estadoServo == derecha){
+  if(estadoRobot == sinParedIzq && distancia <= distancia_objetivo + 20 && estadoServo == derecha){
     velocidad_objetivo = VEL_OBJETIVO_MAX;
-    distancia_objetivo = 20;
     estadoRobot = seguirParedIzq;
     return;
   }
   
-  if(estadoRobot == sinParedDerecha && distancia <= distancia_objetivo && estadoServo == izquierda){
+  if(estadoRobot == sinParedDerecha && distancia <= distancia_objetivo + 20 && estadoServo == izquierda){
     velocidad_objetivo = VEL_OBJETIVO_MAX;
-    distancia_objetivo = 20;
     estadoRobot = seguirParedDerecha;
     return;
   }
 
-  if(estadoRobot == paredEnfrenteIzq && distancia >= distancia_objetivo && estadoServo == centro){
+  if(estadoRobot == paredEnfrenteIzq && distancia >= distancia_objetivo+10 && estadoServo == centro){
     velocidad_objetivo = VEL_OBJETIVO_MAX;
     //PID2.SetControllerDirection(REVERSE);
-    distancia_objetivo = 20;
     estadoRobot = seguirParedIzq;
     return;
   }
-  if(estadoRobot == paredEnfrenteDerecha && distancia >= distancia_objetivo && estadoServo == centro){
+  if(estadoRobot == paredEnfrenteDerecha && distancia >= distancia_objetivo+10 && estadoServo == centro){
     velocidad_objetivo = VEL_OBJETIVO_MAX;
-    distancia_objetivo = 20;
     estadoRobot = seguirParedDerecha;
     return;
   }
@@ -867,21 +814,20 @@ void logicaBotones(){
       conversionRealizada = 0;
       ADCSRA |= (1<<ADSC);
     }
-    //Serial.println("ENTRO");
-    //Serial.println(conversionRealizada);
-    //Serial.println(analogico);
+    
 }
 
 void loop() {
-
   
   if(conversionRealizada && estadoRobot == botones)
     logicaBotones();
-
     logicaRobot();
   
   
   if(estadoRobot != botones){
+    //antiguo_1 = pulsos_1;
+    //antiguo_1b = pulsos_1b;
+  
     pingControl(&distancia);
     lcdControl();
     logicaMotores();
